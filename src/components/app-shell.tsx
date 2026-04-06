@@ -8,17 +8,19 @@ import { StatusStrip } from '@/components/status-strip';
 import { TitleBar } from '@/components/title-bar';
 import { mockDocs, mockThreads } from '@/data/mock';
 import { useOllamaSettings } from '@/hooks/use-ollama-settings';
+import { useTheme } from '@/hooks/use-theme';
 import { checkOllamaReachable } from '@/lib/ollama';
 import type { Thread } from '@/types/domain';
 
 export function AppShell() {
   const { settings, setSettings } = useOllamaSettings();
+  const { matchSystem, manualTheme, setMatchSystem, setManualTheme } =
+    useTheme();
   const [view, setView] = useState<AppView>('ask');
-  const [inspectorOpen, setInspectorOpen] = useState(true);
   const [threads, setThreads] = useState<Thread[]>(mockThreads);
   const [activeThreadId, setActiveThreadId] = useState('t1');
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
-    'm2',
+    null,
   );
   const [ollamaReachable, setOllamaReachable] = useState(false);
   const [focusedDocName, setFocusedDocName] = useState<string | null>(null);
@@ -103,13 +105,7 @@ export function AppShell() {
         onOpenSettings={onOpenSettings}
       />
       <div className="flex min-h-0 flex-1">
-        <NavRail
-          active={view}
-          onChange={setView}
-          inspectorOpen={inspectorOpen}
-          onToggleInspector={() => setInspectorOpen((o) => !o)}
-          showInspectorToggle={view === 'ask'}
-        />
+        <NavRail active={view} onChange={setView} />
         <div className="flex min-w-0 flex-1">
           {view === 'ask' && (
             <AskWorkspace
@@ -134,6 +130,10 @@ export function AppShell() {
             <SettingsWorkspace
               settings={settings}
               onChangeSettings={setSettings}
+              matchSystem={matchSystem}
+              manualTheme={manualTheme}
+              onSetMatchSystem={setMatchSystem}
+              onSetManualTheme={setManualTheme}
             />
           )}
         </div>

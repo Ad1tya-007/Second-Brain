@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, Loader2, Trash2, WifiOff } from "lucide-react";
+import { CheckCircle2, Loader2, Moon, Sun, Trash2, WifiOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,9 +32,20 @@ type SectionId = (typeof sections)[number]["id"];
 type SettingsWorkspaceProps = {
   settings: OllamaSettings;
   onChangeSettings: (patch: Partial<OllamaSettings>) => void;
+  matchSystem: boolean;
+  manualTheme: "light" | "dark";
+  onSetMatchSystem: (v: boolean) => void;
+  onSetManualTheme: (v: "light" | "dark") => void;
 };
 
-export function SettingsWorkspace({ settings, onChangeSettings }: SettingsWorkspaceProps) {
+export function SettingsWorkspace({
+  settings,
+  onChangeSettings,
+  matchSystem,
+  manualTheme,
+  onSetMatchSystem,
+  onSetManualTheme,
+}: SettingsWorkspaceProps) {
   const [active, setActive] = useState<SectionId>("general");
   const [clearOpen, setClearOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -96,14 +107,62 @@ export function SettingsWorkspace({ settings, onChangeSettings }: SettingsWorksp
                 Appearance and default workspace behavior.
               </p>
               <Separator className="my-4" />
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Match system appearance */}
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <Label htmlFor="theme">Match system appearance</Label>
-                    <p className="text-xs text-muted-foreground">Follow macOS light/dark mode.</p>
+                    <Label htmlFor="match-system">Match system appearance</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Automatically follow macOS light/dark mode.
+                    </p>
                   </div>
-                  <Switch id="theme" defaultChecked />
+                  <Switch
+                    id="match-system"
+                    checked={matchSystem}
+                    onCheckedChange={onSetMatchSystem}
+                  />
                 </div>
+
+                {/* Manual theme picker — only visible when match system is OFF */}
+                {!matchSystem && (
+                  <div className="flex flex-col gap-2">
+                    <Label>Theme</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Choose a theme to use across the app.
+                    </p>
+                    <div className="mt-1 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onSetManualTheme("light")}
+                        className={cn(
+                          "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors",
+                          manualTheme === "light"
+                            ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary/40"
+                            : "border-border text-muted-foreground hover:border-border/80 hover:bg-muted/40 hover:text-foreground"
+                        )}
+                        aria-pressed={manualTheme === "light"}
+                      >
+                        <Sun className="size-4" strokeWidth={1.75} />
+                        Light
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSetManualTheme("dark")}
+                        className={cn(
+                          "flex flex-1 items-center justify-center gap-2 rounded-lg border py-2.5 text-sm font-medium transition-colors",
+                          manualTheme === "dark"
+                            ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary/40"
+                            : "border-border text-muted-foreground hover:border-border/80 hover:bg-muted/40 hover:text-foreground"
+                        )}
+                        aria-pressed={manualTheme === "dark"}
+                      >
+                        <Moon className="size-4" strokeWidth={1.75} />
+                        Dark
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="launch">Open to workspace</Label>
                   <select
