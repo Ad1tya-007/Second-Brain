@@ -1,4 +1,4 @@
-import type { ActivityItem, SourceDoc, Thread } from "@/types/domain";
+import type { SourceDoc, Thread } from '@/types/domain';
 
 // ---------------------------------------------------------------------------
 // Note contents — these simulate what would be stored in SQLite after indexing.
@@ -6,7 +6,7 @@ import type { ActivityItem, SourceDoc, Thread } from "@/types/domain";
 // ---------------------------------------------------------------------------
 
 export const noteContents: Record<string, string> = {
-  "system-design-notes.md": `# System Design Notes
+  'system-design-notes.md': `# System Design Notes
 
 ## Scalability
 
@@ -70,7 +70,7 @@ Three pillars: **metrics**, **traces**, **logs**.
 Alerting: alert on symptoms (high error rate, slow latency) rather than causes (high CPU). Causes are for debugging, not paging.
 `,
 
-  "react-hooks-cheatsheet.md": `# React Hooks Cheatsheet
+  'react-hooks-cheatsheet.md': `# React Hooks Cheatsheet
 
 ## Rules of Hooks
 
@@ -149,7 +149,7 @@ function useDebounce<T>(value: T, delay: number): T {
 Custom hooks compose cleanly — one hook can call other hooks.
 `,
 
-  "machine-learning-fundamentals.md": `# Machine Learning Fundamentals
+  'machine-learning-fundamentals.md': `# Machine Learning Fundamentals
 
 ## Core Concepts
 
@@ -213,7 +213,7 @@ Chunk size matters: too small loses context; too large wastes context window and
 Always evaluate on a held-out test set. Report confidence intervals when comparing models.
 `,
 
-  "startup-ideas-brainstorm.md": `# Startup Ideas Brainstorm — 2026
+  'startup-ideas-brainstorm.md': `# Startup Ideas Brainstorm — 2026
 
 ## Ideas I'm Exploring
 
@@ -255,7 +255,7 @@ My current ranking: Local Second Brain > Personal Finance Autopilot > Async Stan
 - Paul Graham essays on doing things that don't scale.
 `,
 
-  "books-and-papers-2026.md": `# Books & Papers I've Read — 2026
+  'books-and-papers-2026.md': `# Books & Papers I've Read — 2026
 
 ## Books
 
@@ -297,7 +297,7 @@ Optimal: scale parameters and data together; don't over-train a small model.
 Practical implication: given a fixed compute budget, a larger model trained on fewer steps often beats a smaller model trained to convergence.
 `,
 
-  "workout-and-health-log.md": `# Workout & Health Log
+  'workout-and-health-log.md': `# Workout & Health Log
 
 ## Current Program: 4-Day Upper/Lower Split
 
@@ -345,7 +345,7 @@ HRV (heart rate variability) as recovery proxy: high HRV → train hard, low HRV
 - Mobility work 10 min daily: hip flexors, thoracic spine, shoulder internal rotation — my specific weak spots.
 `,
 
-  "travel-notes-japan.md": `# Japan Trip Notes — March 2026
+  'travel-notes-japan.md': `# Japan Trip Notes — March 2026
 
 ## Tokyo (7 nights)
 
@@ -382,7 +382,7 @@ HRV (heart rate variability) as recovery proxy: high HRV → train hard, low HRV
 - Add Osaka and Nara; 2 days each would have been easy from Kyoto.
 `,
 
-  "typescript-advanced-patterns.md": `# TypeScript Advanced Patterns
+  'typescript-advanced-patterns.md': `# TypeScript Advanced Patterns
 
 ## Conditional Types
 
@@ -474,85 +474,85 @@ getUser(orderId); // TS error — can't pass OrderId where UserId expected
 
 export const mockDocs: SourceDoc[] = [
   {
-    id: "1",
-    name: "system-design-notes",
-    ext: ".md",
-    state: "ready",
+    id: '1',
+    name: 'system-design-notes',
+    ext: '.md',
+    state: 'ready',
     chunks: 42,
-    updatedAt: "2026-04-04T14:22:00",
+    updatedAt: '2026-04-04T14:22:00',
   },
   {
-    id: "2",
-    name: "react-hooks-cheatsheet",
-    ext: ".md",
-    state: "ready",
+    id: '2',
+    name: 'react-hooks-cheatsheet',
+    ext: '.md',
+    state: 'ready',
     chunks: 18,
-    updatedAt: "2026-04-03T09:10:00",
+    updatedAt: '2026-04-03T09:10:00',
   },
   {
-    id: "3",
-    name: "machine-learning-fundamentals",
-    ext: ".md",
-    state: "ready",
+    id: '3',
+    name: 'machine-learning-fundamentals',
+    ext: '.md',
+    state: 'ready',
     chunks: 31,
-    updatedAt: "2026-04-02T15:45:00",
+    updatedAt: '2026-04-02T15:45:00',
   },
   {
-    id: "4",
-    name: "startup-ideas-brainstorm",
-    ext: ".md",
-    state: "ready",
+    id: '4',
+    name: 'startup-ideas-brainstorm',
+    ext: '.md',
+    state: 'ready',
     chunks: 14,
-    updatedAt: "2026-04-01T10:30:00",
+    updatedAt: '2026-04-01T10:30:00',
   },
   {
-    id: "5",
-    name: "books-and-papers-2026",
-    ext: ".md",
-    state: "ready",
+    id: '5',
+    name: 'books-and-papers-2026',
+    ext: '.md',
+    state: 'ready',
     chunks: 22,
-    updatedAt: "2026-03-28T09:00:00",
+    updatedAt: '2026-03-28T09:00:00',
   },
   {
-    id: "6",
-    name: "workout-and-health-log",
-    ext: ".md",
-    state: "ready",
+    id: '6',
+    name: 'workout-and-health-log',
+    ext: '.md',
+    state: 'ready',
     chunks: 19,
-    updatedAt: "2026-04-05T07:15:00",
+    updatedAt: '2026-04-05T07:15:00',
   },
   {
-    id: "7",
-    name: "travel-notes-japan",
-    ext: ".md",
-    state: "ready",
+    id: '7',
+    name: 'travel-notes-japan',
+    ext: '.md',
+    state: 'ready',
     chunks: 16,
-    updatedAt: "2026-03-22T20:00:00",
+    updatedAt: '2026-03-22T20:00:00',
   },
   {
-    id: "8",
-    name: "typescript-advanced-patterns",
-    ext: ".md",
-    state: "ready",
+    id: '8',
+    name: 'typescript-advanced-patterns',
+    ext: '.md',
+    state: 'ready',
     chunks: 24,
-    updatedAt: "2026-03-30T11:20:00",
+    updatedAt: '2026-03-30T11:20:00',
   },
   {
-    id: "9",
-    name: "reading-list-2026",
-    ext: ".txt",
-    state: "processing",
+    id: '9',
+    name: 'reading-list-2026',
+    ext: '.txt',
+    state: 'processing',
     chunks: 0,
-    updatedAt: "2026-04-05T11:01:00",
+    updatedAt: '2026-04-05T11:01:00',
   },
   {
-    id: "10",
-    name: "draft-ideas",
-    ext: ".md",
-    state: "failed",
+    id: '10',
+    name: 'draft-ideas',
+    ext: '.md',
+    state: 'failed',
     chunks: 0,
-    updatedAt: "2026-04-01T16:40:00",
-    error: "Embedding model unavailable",
+    updatedAt: '2026-04-01T16:40:00',
+    error: 'Embedding model unavailable',
   },
 ];
 
@@ -562,25 +562,19 @@ export const mockDocs: SourceDoc[] = [
 
 export const mockThreads: Thread[] = [
   {
-    id: "t0",
-    title: "New conversation",
-    updatedAt: "2026-04-05T12:00:00",
-    messages: [],
-  },
-  {
-    id: "t1",
-    title: "Summarize React hooks",
-    updatedAt: "2026-04-05T10:00:00",
+    id: 't1',
+    title: 'Summarize React hooks',
+    updatedAt: '2026-04-05T10:00:00',
     messages: [
       {
-        id: "m1",
-        role: "user",
+        id: 'm1',
+        role: 'user',
         content:
-          "Summarize what I captured about React hooks from my notes, focusing on rules and common pitfalls.",
+          'Summarize what I captured about React hooks from my notes, focusing on rules and common pitfalls.',
       },
       {
-        id: "m2",
-        role: "assistant",
+        id: 'm2',
+        role: 'assistant',
         content: `Based on your **react-hooks-cheatsheet** notes:
 
 ## Rules of Hooks
@@ -607,38 +601,22 @@ A useful pattern for always-fresh callbacks:
 const latestCallback = useRef(callback);
 latestCallback.current = callback; // stays up-to-date without re-running effects
 \`\`\``,
-        citations: [
-          {
-            id: "c1",
-            docTitle: "react-hooks-cheatsheet.md",
-            excerpt:
-              "Hooks must be called in the same order on every render. Violating this breaks React's internal hook list.",
-            score: 0.94,
-          },
-          {
-            id: "c2",
-            docTitle: "react-hooks-cheatsheet.md",
-            excerpt:
-              "Stale closures: callbacks inside effects close over the value at the time of creation. Use the functional update form of setState or refs to avoid this.",
-            score: 0.89,
-          },
-        ],
       },
     ],
   },
   {
-    id: "t2",
-    title: "Caching tradeoffs in system design",
-    updatedAt: "2026-04-04T18:30:00",
+    id: 't2',
+    title: 'Caching tradeoffs in system design',
+    updatedAt: '2026-04-04T18:30:00',
     messages: [
       {
-        id: "m3",
-        role: "user",
-        content: "What did I note about caching tradeoffs?",
+        id: 'm3',
+        role: 'user',
+        content: 'What did I note about caching tradeoffs?',
       },
       {
-        id: "m4",
-        role: "assistant",
+        id: 'm4',
+        role: 'assistant',
         content: `From your **system-design-notes**:
 
 Your notes emphasise that **cache invalidation is hard** — prefer explicit versioning for critical paths.
@@ -660,17 +638,17 @@ When a popular key expires simultaneously, many requests hit the backend at once
 | CDN | varies | closest to user |`,
         citations: [
           {
-            id: "c3",
-            docTitle: "system-design-notes.md",
+            id: 'c3',
+            docTitle: 'system-design-notes.md',
             excerpt:
-              "Cache invalidation is hard; prefer explicit versioning for critical paths.",
+              'Cache invalidation is hard; prefer explicit versioning for critical paths.',
             score: 0.92,
           },
           {
-            id: "c4",
-            docTitle: "system-design-notes.md",
+            id: 'c4',
+            docTitle: 'system-design-notes.md',
             excerpt:
-              "Cache stampede (thundering herd): when a popular key expires, many requests simultaneously hit the backend. Mitigate with request coalescing, probabilistic early expiration, or background refresh.",
+              'Cache stampede (thundering herd): when a popular key expires, many requests simultaneously hit the backend. Mitigate with request coalescing, probabilistic early expiration, or background refresh.',
             score: 0.87,
           },
         ],
@@ -678,18 +656,18 @@ When a popular key expires simultaneously, many requests hit the backend at once
     ],
   },
   {
-    id: "t3",
-    title: "RAG and ML fundamentals",
-    updatedAt: "2026-04-03T16:00:00",
+    id: 't3',
+    title: 'RAG and ML fundamentals',
+    updatedAt: '2026-04-03T16:00:00',
     messages: [
       {
-        id: "m5",
-        role: "user",
-        content: "Explain RAG based on my ML notes.",
+        id: 'm5',
+        role: 'user',
+        content: 'Explain RAG based on my ML notes.',
       },
       {
-        id: "m6",
-        role: "assistant",
+        id: 'm6',
+        role: 'assistant',
         content: `From your **machine-learning-fundamentals** notes:
 
 ## RAG — Retrieval-Augmented Generation
@@ -707,51 +685,8 @@ RAG is a technique to ground LLM responses in real, retrieved facts — reducing
 
 ### Embeddings
 Sentence embeddings (like **nomic-embed-text**) compress an entire sentence into one vector. Similar sentences cluster nearby in embedding space, which is how the retrieval step finds relevant content.`,
-        citations: [
-          {
-            id: "c5",
-            docTitle: "machine-learning-fundamentals.md",
-            excerpt:
-              "RAG reduces hallucination by grounding the model in real, retrieved facts.",
-            score: 0.96,
-          },
-          {
-            id: "c6",
-            docTitle: "machine-learning-fundamentals.md",
-            excerpt:
-              "Sentence embeddings compress an entire sentence into one vector, useful for semantic search.",
-            score: 0.88,
-          },
-        ],
       },
     ],
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Activity feed
-// ---------------------------------------------------------------------------
-
-export const mockActivity: ActivityItem[] = [
-  {
-    id: "a1",
-    kind: "index",
-    label: "reading-list-2026.txt",
-    status: "running",
-    progress: 0.62,
-  },
-  {
-    id: "a2",
-    kind: "embed",
-    label: "Batch embed · 176 chunks across 8 documents",
-    status: "done",
-  },
-  {
-    id: "a3",
-    kind: "error",
-    label: "draft-ideas.md",
-    detail: "Embedding model unavailable",
-    status: "failed",
   },
 ];
 
@@ -760,13 +695,13 @@ export const mockActivity: ActivityItem[] = [
 // ---------------------------------------------------------------------------
 
 export const starterPrompts = [
-  "Summarize my system design notes on caching and consistency.",
-  "What did I capture about RAG and embeddings in my ML notes?",
-  "What were the best food spots from my Japan trip?",
-  "What books did I read this year and what were my key takeaways?",
-  "Explain the TypeScript branded types pattern from my notes.",
-  "What workout split am I currently following and what are my lifts?",
-  "What startup ideas am I exploring and how did I rank them?",
+  'Summarize my system design notes on caching and consistency.',
+  'What did I capture about RAG and embeddings in my ML notes?',
+  'What were the best food spots from my Japan trip?',
+  'What books did I read this year and what were my key takeaways?',
+  'Explain the TypeScript branded types pattern from my notes.',
+  'What workout split am I currently following and what are my lifts?',
+  'What startup ideas am I exploring and how did I rank them?',
 ];
 
 // ---------------------------------------------------------------------------
@@ -777,7 +712,7 @@ export const starterPrompts = [
 export function buildSystemPrompt(): string {
   const notesSections = Object.entries(noteContents)
     .map(([filename, content]) => `### ${filename}\n\n${content}`)
-    .join("\n\n---\n\n");
+    .join('\n\n---\n\n');
 
   return `You are a personal knowledge assistant. You have access to the user's private notes below.
 

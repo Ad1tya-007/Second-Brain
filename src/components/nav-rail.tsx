@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
-  Activity,
   BookOpen,
   MessageCircleQuestion,
   Moon,
@@ -8,35 +7,35 @@ import {
   PanelRightOpen,
   Settings,
   Sun,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 /** Read the current theme from the DOM (source of truth). */
-function currentTheme(): "light" | "dark" {
-  return document.documentElement.classList.contains("dark") ? "dark" : "light";
+function currentTheme(): 'light' | 'dark' {
+  return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 }
 
 function useThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark">(currentTheme);
+  const [theme, setTheme] = useState<'light' | 'dark'>(currentTheme);
 
   const toggle = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    document.documentElement.classList.toggle("dark", next === "dark");
-    localStorage.setItem("lsb:theme", next);
+    const next = theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.classList.toggle('dark', next === 'dark');
+    localStorage.setItem('lsb:theme', next);
     setTheme(next);
   };
 
   return { theme, toggle };
 }
 
-export type AppView = "ask" | "library" | "activity" | "settings";
+export type AppView = 'ask' | 'library' | 'settings';
 
 type NavRailProps = {
   active: AppView;
@@ -47,11 +46,14 @@ type NavRailProps = {
   showInspectorToggle?: boolean;
 };
 
-const items: { id: AppView; label: string; icon: typeof MessageCircleQuestion }[] = [
-  { id: "ask", label: "Ask", icon: MessageCircleQuestion },
-  { id: "library", label: "Library", icon: BookOpen },
-  { id: "activity", label: "Activity", icon: Activity },
-  { id: "settings", label: "Settings", icon: Settings },
+const items: {
+  id: AppView;
+  label: string;
+  icon: typeof MessageCircleQuestion;
+}[] = [
+  { id: 'ask', label: 'Ask', icon: MessageCircleQuestion },
+  { id: 'library', label: 'Library', icon: BookOpen },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 export function NavRail({
@@ -66,22 +68,20 @@ export function NavRail({
   return (
     <nav
       className="flex w-[52px] shrink-0 flex-col items-center gap-1 border-r border-border bg-sidebar py-3"
-      aria-label="Primary"
-    >
+      aria-label="Primary">
       {items.map(({ id, label, icon: Icon }) => (
         <Tooltip key={id}>
           <TooltipTrigger>
             <Button
-              variant={active === id ? "secondary" : "ghost"}
+              variant={active === id ? 'secondary' : 'ghost'}
               size="icon"
               className={cn(
-                "size-9 rounded-lg",
+                'size-9 rounded-lg',
                 active === id &&
-                  "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
+                  'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm',
               )}
               onClick={() => onChange(id)}
-              aria-current={active === id ? "page" : undefined}
-            >
+              aria-current={active === id ? 'page' : undefined}>
               <Icon className="size-[18px]" strokeWidth={1.75} />
             </Button>
           </TooltipTrigger>
@@ -101,9 +101,10 @@ export function NavRail({
             size="icon"
             className="size-9 rounded-lg"
             onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? (
+            aria-label={
+              theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+            }>
+            {theme === 'dark' ? (
               <Sun className="size-[18px]" strokeWidth={1.75} />
             ) : (
               <Moon className="size-[18px]" strokeWidth={1.75} />
@@ -111,7 +112,7 @@ export function NavRail({
           </Button>
         </TooltipTrigger>
         <TooltipContent side="right" className="text-xs">
-          {theme === "dark" ? "Light mode" : "Dark mode"}
+          {theme === 'dark' ? 'Light mode' : 'Dark mode'}
         </TooltipContent>
       </Tooltip>
 
@@ -123,8 +124,7 @@ export function NavRail({
               size="icon"
               className="size-9 rounded-lg"
               onClick={onToggleInspector}
-              aria-pressed={inspectorOpen}
-            >
+              aria-pressed={inspectorOpen}>
               {inspectorOpen ? (
                 <PanelRightClose className="size-[18px]" strokeWidth={1.75} />
               ) : (
@@ -133,7 +133,7 @@ export function NavRail({
             </Button>
           </TooltipTrigger>
           <TooltipContent side="right" className="text-xs">
-            {inspectorOpen ? "Hide inspector" : "Show inspector"}
+            {inspectorOpen ? 'Hide inspector' : 'Show inspector'}
           </TooltipContent>
         </Tooltip>
       )}
