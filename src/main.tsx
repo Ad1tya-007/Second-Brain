@@ -1,10 +1,72 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App";
-import "./index.css";
+import React, { useEffect, useState } from 'react';
+import ReactDOM from 'react-dom/client';
+import { Toaster } from 'sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import App from './App';
+import './index.css';
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+// Apply theme class synchronously before first paint to avoid a flash.
+(function applyInitialTheme() {
+  const saved = localStorage.getItem('lsb:theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const dark = saved === 'dark' || (!saved && prefersDark);
+  document.documentElement.classList.toggle('dark', dark);
+})();
+
+/**
+ * Watches the <html> element for class changes and returns the current
+ * "light" | "dark" value — reacts to our nav-rail toggle button.
+ */
+function useDocumentTheme(): 'light' | 'dark' {
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains('dark'),
+  );
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+    return () => observer.disconnect();
+  }, []);
+
+  return isDark ? 'dark' : 'light';
+}
+
+function Root() {
+  const theme = useDocumentTheme();
+
+  return (
+    <TooltipProvider delay={200}>
+      <App />
+      <Toaster
+        position="top-right"
+        theme={theme}
+        gap={8}
+        toastOptions={{
+          classNames: {
+            toast: [
+              'font-sans rounded-xl border shadow-md',
+              'px-4 py-3 text-sm',
+            ].join(' '),
+            title: 'font-semibold tracking-tight text-[13px]',
+            description: 'text-[12px] mt-0.5 opacity-60',
+            success: '!border-emerald-500/20 [&_[data-icon]]:text-emerald-500',
+            error: '!border-destructive/20 [&_[data-icon]]:text-destructive',
+            closeButton: '!top-3 !right-3 opacity-50 hover:opacity-100',
+          },
+          duration: 4000,
+        }}
+      />
+    </TooltipProvider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <Root />
   </React.StrictMode>,
 );
