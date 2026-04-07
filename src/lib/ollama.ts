@@ -7,6 +7,7 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 /**
  * Ask the Rust backend to spawn `ollama serve` as a background process.
@@ -20,6 +21,42 @@ export async function startOllama(): Promise<void> {
 /** Ask the Rust backend to stop the Ollama process (killall / taskkill). */
 export async function stopOllama(): Promise<void> {
   await invoke("stop_ollama");
+}
+
+/** Progress events emitted while `install_ollama` runs (desktop app only). */
+export type OllamaInstallProgressPayload = {
+  phase: string;
+  message: string;
+  percent: number;
+  bytes_received?: number | null;
+  bytes_total?: number | null;
+  eta_seconds?: number | null;
+};
+
+/** Returns whether the `ollama` CLI is on PATH. False in browser dev or if not installed. */
+export async function isOllamaCliInstalled(): Promise<boolean> {
+  try {
+    return await invoke<boolean>("is_ollama_installed");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Download and install Ollama via the native installer. Streams progress via callback.
+ * Requires the Tauri desktop app (invokes Rust).
+ */
+export async function installOllamaWithProgress(
+  onProgress: (p: OllamaInstallProgressPayload) => void,
+): Promise<void> {
+  const unlisten = await listen<OllamaInstallProgressPayload>("ollama-install-progress", (event) => {
+    onProgress(event.payload);
+  });
+  try {
+    await invoke("install_ollama");
+  } finally {
+    unlisten();
+  }
 }
 
 export type OllamaModel = {

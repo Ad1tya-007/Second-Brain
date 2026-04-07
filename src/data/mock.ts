@@ -217,7 +217,7 @@ Always evaluate on a held-out test set. Report confidence intervals when compari
 
 ## Ideas I'm Exploring
 
-### 1. Local Second Brain (current project)
+### 1. Second Brain (current project)
 An offline, AI-powered knowledge base that indexes personal notes and lets you query them in natural language.
 Key insight: people accumulate notes they never re-read. RAG turns passive notes into an active, queryable system.
 Differentiator: 100% local, no subscription, no data leaving the device.

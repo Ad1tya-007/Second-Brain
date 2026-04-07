@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CircleDot, Loader2, Moon, Play, Square, Sun, Trash2, WifiOff } from "lucide-react";
+import { CircleDot, Download, Loader2, Moon, Play, Square, Sun, Trash2, WifiOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,9 +18,12 @@ import { Switch } from "@/components/ui/switch";
 import type { OllamaSettings } from "@/hooks/use-ollama-settings";
 import {
   checkOllamaReachable,
+  installOllamaWithProgress,
+  isOllamaCliInstalled,
   listOllamaModels,
   startOllama,
   stopOllama,
+  type OllamaInstallProgressPayload,
   type OllamaModel,
 } from "@/lib/ollama";
 import { cn } from "@/lib/utils";
@@ -66,6 +69,12 @@ export function SettingsWorkspace({
   const [pulledModels, setPulledModels] = useState<OllamaModel[]>([]);
   const [modelsLoading, setModelsLoading] = useState(false);
 
+  /** null = still checking whether `ollama` exists on PATH */
+  const [ollamaCliInstalled, setOllamaCliInstalled] = useState<boolean | null>(null);
+  const [installingOllama, setInstallingOllama] = useState(false);
+  const [installProgress, setInstallProgress] = useState<OllamaInstallProgressPayload | null>(null);
+  const [installError, setInstallError] = useState<string | null>(null);
+
   // Start / stop Ollama state.
   type StartState = "idle" | "launching" | "waiting" | "error";
   const [startState, setStartState] = useState<StartState>("idle");
@@ -83,6 +92,19 @@ export function SettingsWorkspace({
   };
 
   useEffect(() => () => clearPoll(), []);
+
+  // Detect Ollama CLI when opening Models
+  useEffect(() => {
+    if (active !== "models") return;
+    let cancelled = false;
+    setOllamaCliInstalled(null);
+    isOllamaCliInstalled().then((ok) => {
+      if (!cancelled) setOllamaCliInstalled(ok);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [active]);
 
   // When Ollama is reachable and Models is open, refresh the pulled-models list (replaces "Test connection").
   useEffect(() => {
@@ -164,6 +186,39 @@ export function SettingsWorkspace({
 
   const handleSaveModels = () => {
     onChangeSettings(draft);
+  };
+
+  const handleInstallOllama = async () => {
+    setInstallError(null);
+    setInstallProgress(null);
+    setInstallingOllama(true);
+    try {
+      await installOllamaWithProgress((p) => setInstallProgress(p));
+      const ok = await isOllamaCliInstalled();
+      setOllamaCliInstalled(ok);
+      setInstallProgress(null);
+      // macOS installer may start the app — poll for HTTP API
+      if (ok) {
+        for (let i = 0; i < 25; i++) {
+          const up = await checkOllamaReachable(draft.baseUrl);
+          if (up) {
+            onOllamaReachableChange(true);
+            break;
+          }
+          await new Promise((r) => setTimeout(r, 800));
+        }
+      }
+    } catch (e) {
+      setInstallError(String(e));
+    } finally {
+      setInstallingOllama(false);
+    }
+  };
+
+  const formatEta = (s?: number | null) => {
+    if (s == null || s <= 0 || !Number.isFinite(s)) return null;
+    if (s < 90) return `~${s}s remaining`;
+    return `~${Math.ceil(s / 60)}m remaining`;
   };
 
   return (
@@ -277,6 +332,83 @@ export function SettingsWorkspace({
               </p>
               <Separator className="my-4" />
 
+              {/* ── Install Ollama (when CLI missing) ─────────────────── */}
+              {ollamaCliInstalled === false && (
+                <div className="mb-6 rounded-xl border border-primary/25 bg-primary/5 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Ollama is not installed</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Ollama runs AI models on your device. We can download and install it for you
+                        (official installer from ollama.com). On macOS and Windows you will see real
+                        download progress; on Linux the official script runs in the background (your
+                        password may be required).
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="shrink-0 gap-2"
+                      onClick={handleInstallOllama}
+                      disabled={installingOllama}
+                    >
+                      {installingOllama ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
+                          Installing…
+                        </>
+                      ) : (
+                        <>
+                          <Download className="size-4" strokeWidth={1.75} />
+                          Install Ollama
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {(installingOllama || installProgress) && (
+                    <div className="mt-4 space-y-2">
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+                          style={{
+                            width: `${Math.min(100, Math.max(0, installProgress?.percent ?? (installingOllama ? 2 : 0)))}%`,
+                          }}
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <span className="text-muted-foreground">
+                          {installProgress?.message ?? "Preparing…"}
+                        </span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {installProgress != null && (
+                            <>
+                              {installProgress.percent.toFixed(0)}%
+                              {formatEta(installProgress.eta_seconds) != null
+                                ? ` · ${formatEta(installProgress.eta_seconds)}`
+                                : ""}
+                            </>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {installError && (
+                    <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive">
+                      {installError}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {ollamaCliInstalled === null && active === "models" && (
+                <div className="mb-6 flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
+                  Checking for Ollama…
+                </div>
+              )}
+
               {/* ── Ollama server status ────────────────────────────────── */}
               <div
                 className={cn(
@@ -305,7 +437,9 @@ export function SettingsWorkspace({
                     <p className="text-xs text-muted-foreground">
                       {ollamaReachable
                         ? `Listening on ${draft.baseUrl}`
-                        : "Start the Ollama server to enable AI chat."}
+                        : ollamaCliInstalled === false
+                          ? "Install Ollama above, then start the server here."
+                          : "Start the Ollama server to enable AI chat."}
                     </p>
                   </div>
                 </div>
@@ -338,7 +472,14 @@ export function SettingsWorkspace({
                       size="sm"
                       className="gap-2"
                       onClick={handleStartOllama}
-                      disabled={startState === "launching" || startState === "waiting" || stopState === "stopping"}
+                      disabled={
+                        startState === "launching" ||
+                        startState === "waiting" ||
+                        stopState === "stopping" ||
+                        ollamaCliInstalled === false ||
+                        ollamaCliInstalled === null ||
+                        installingOllama
+                      }
                     >
                       {startState === "launching" || startState === "waiting" ? (
                         <>

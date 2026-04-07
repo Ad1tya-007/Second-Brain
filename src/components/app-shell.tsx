@@ -103,7 +103,7 @@ export function AppShell() {
           className="flex flex-row items-center gap-2"
           data-tauri-drag-region>
           <span className="truncate text-xs font-medium text-muted-foreground">
-            Local Second Brain
+            Second Brain
           </span>
           <span className="hidden text-xs text-muted-foreground/70 sm:inline">
             · on-device knowledge

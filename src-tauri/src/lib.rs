@@ -1,3 +1,5 @@
+mod ollama_install;
+
 use std::process::{Command, Stdio};
 
 /// Spawns `ollama serve` as a detached background process.
@@ -59,7 +61,12 @@ fn stop_ollama() -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![start_ollama, stop_ollama])
+        .invoke_handler(tauri::generate_handler![
+            start_ollama,
+            stop_ollama,
+            ollama_install::is_ollama_installed,
+            ollama_install::install_ollama
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

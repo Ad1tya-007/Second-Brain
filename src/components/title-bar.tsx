@@ -7,7 +7,7 @@ export function TitleBar() {
         className="flex min-w-0 flex-1 items-center gap-2 pr-3"
         data-tauri-drag-region>
         <span className="truncate text-xs font-medium text-muted-foreground">
-          Local Second Brain
+          Second Brain
         </span>
         <span className="hidden text-xs text-muted-foreground/70 sm:inline">
           · on-device knowledge

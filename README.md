@@ -1,4 +1,4 @@
-# Local Second Brain
+# Second Brain
 
 A private, AI-powered knowledge assistant that lives entirely on your Mac. No subscriptions, no cloud, no data leaving your device — just your notes and a local AI that understands them.
 
@@ -6,14 +6,15 @@ A private, AI-powered knowledge assistant that lives entirely on your Mac. No su
 
 ## What it does
 
-Most people accumulate notes, documents, and ideas they never revisit. Local Second Brain turns those passive files into something you can actually talk to.
+Most people accumulate notes, documents, and ideas they never revisit. Second Brain turns those passive files into something you can actually talk to.
 
-You drop in your personal notes — markdown files, plain text, anything — and the app indexes them locally. From there, you can ask questions in plain English and get answers that are grounded in *your own writing*, not generic internet knowledge.
+You drop in your personal notes — markdown files, plain text, anything — and the app indexes them locally. From there, you can ask questions in plain English and get answers that are grounded in _your own writing_, not generic internet knowledge.
 
 Ask things like:
-- *"What did I capture about caching strategies?"*
-- *"Summarize my workout program and current lifts"*
-- *"What books did I read this year and what were my takeaways?"*
+
+- _"What did I capture about caching strategies?"_
+- _"Summarize my workout program and current lifts"_
+- _"What books did I read this year and what were my takeaways?"_
 
 The AI pulls relevant passages from your notes, assembles an answer, and shows you exactly which sources it used — with a relevance score for each one. Click any source to jump straight to the note.
 
@@ -40,12 +41,12 @@ The **backend (Rust/Tauri + SQLite) is currently in progress.** Right now notes 
 
 ## Built with
 
-| Layer | Technology |
-|---|---|
-| Desktop shell | [Tauri](https://tauri.app) (Rust + WebKit) |
-| UI | React, TypeScript, Tailwind CSS, shadcn/ui |
+| Layer               | Technology                                           |
+| ------------------- | ---------------------------------------------------- |
+| Desktop shell       | [Tauri](https://tauri.app) (Rust + WebKit)           |
+| UI                  | React, TypeScript, Tailwind CSS, shadcn/ui           |
 | AI (chat + answers) | [Ollama](https://ollama.com) — local LLM, no API key |
-| Planned storage | SQLite + vector embeddings |
+| Planned storage     | SQLite + vector embeddings                           |
 
 ---
 
@@ -68,6 +69,7 @@ npm run tauri dev
 ```
 
 To run the frontend only (no Rust build required):
+
 ```bash
 npm run dev
 ```
