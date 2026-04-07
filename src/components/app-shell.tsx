@@ -134,6 +134,8 @@ export function AppShell() {
               manualTheme={manualTheme}
               onSetMatchSystem={setMatchSystem}
               onSetManualTheme={setManualTheme}
+              ollamaReachable={ollamaReachable}
+              onOllamaReachableChange={setOllamaReachable}
             />
           )}
         </div>

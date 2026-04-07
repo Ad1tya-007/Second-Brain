@@ -6,6 +6,17 @@
  * No API key or cloud needed — everything stays on-device.
  */
 
+import { invoke } from "@tauri-apps/api/core";
+
+/**
+ * Ask the Rust backend to spawn `ollama serve` as a background process.
+ * Resolves when the process is launched (not when Ollama is ready — poll
+ * `checkOllamaReachable` to detect when the server is accepting requests).
+ */
+export async function startOllama(): Promise<void> {
+  await invoke("start_ollama");
+}
+
 export type OllamaModel = {
   name: string;
   modified_at: string;

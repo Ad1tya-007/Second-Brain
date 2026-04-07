@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { CheckCircle2, Loader2, Moon, Sun, Trash2, WifiOff } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, CircleDot, Loader2, Moon, Play, Sun, Trash2, WifiOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import type { OllamaSettings } from "@/hooks/use-ollama-settings";
-import { checkOllamaReachable, listOllamaModels, type OllamaModel } from "@/lib/ollama";
+import { checkOllamaReachable, listOllamaModels, startOllama, type OllamaModel } from "@/lib/ollama";
 import { cn } from "@/lib/utils";
 
 const sections = [
@@ -36,6 +36,8 @@ type SettingsWorkspaceProps = {
   manualTheme: "light" | "dark";
   onSetMatchSystem: (v: boolean) => void;
   onSetManualTheme: (v: "light" | "dark") => void;
+  ollamaReachable: boolean;
+  onOllamaReachableChange: (v: boolean) => void;
 };
 
 export function SettingsWorkspace({
@@ -45,6 +47,8 @@ export function SettingsWorkspace({
   manualTheme,
   onSetMatchSystem,
   onSetManualTheme,
+  ollamaReachable,
+  onOllamaReachableChange,
 }: SettingsWorkspaceProps) {
   const [active, setActive] = useState<SectionId>("general");
   const [clearOpen, setClearOpen] = useState(false);
@@ -57,6 +61,46 @@ export function SettingsWorkspace({
   type TestState = "idle" | "testing" | "ok" | "fail";
   const [testState, setTestState] = useState<TestState>("idle");
   const [pulledModels, setPulledModels] = useState<OllamaModel[]>([]);
+
+  // Start Ollama state.
+  type StartState = "idle" | "launching" | "waiting" | "error";
+  const [startState, setStartState] = useState<StartState>("idle");
+  const [startError, setStartError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clear any lingering poll on unmount.
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+  const handleStartOllama = async () => {
+    setStartState("launching");
+    setStartError(null);
+    try {
+      await startOllama();
+    } catch (e) {
+      setStartState("error");
+      setStartError(String(e));
+      return;
+    }
+
+    // Poll until the server is up (up to ~20 s).
+    setStartState("waiting");
+    let attempts = 0;
+    pollRef.current = setInterval(async () => {
+      attempts++;
+      const ok = await checkOllamaReachable(draft.baseUrl);
+      if (ok) {
+        clearInterval(pollRef.current!);
+        pollRef.current = null;
+        onOllamaReachableChange(true);
+        setStartState("idle");
+      } else if (attempts >= 20) {
+        clearInterval(pollRef.current!);
+        pollRef.current = null;
+        setStartState("error");
+        setStartError("Ollama launched but did not respond within 20 seconds.");
+      }
+    }, 1000);
+  };
 
   const handleTestConnection = async () => {
     setTestState("testing");
@@ -185,6 +229,70 @@ export function SettingsWorkspace({
                 Local Ollama endpoint and model names. Changes are saved when you click Save.
               </p>
               <Separator className="my-4" />
+
+              {/* ── Ollama server status ────────────────────────────────── */}
+              <div
+                className={cn(
+                  "mb-6 flex items-center justify-between gap-4 rounded-xl border p-4",
+                  ollamaReachable
+                    ? "border-emerald-400/30 bg-emerald-500/5"
+                    : "border-border bg-muted/30"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  {ollamaReachable ? (
+                    <CircleDot
+                      className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400"
+                      strokeWidth={1.75}
+                    />
+                  ) : (
+                    <WifiOff
+                      className="size-5 shrink-0 text-muted-foreground"
+                      strokeWidth={1.75}
+                    />
+                  )}
+                  <div>
+                    <p className="text-sm font-medium">
+                      {ollamaReachable ? "Ollama is running" : "Ollama is not running"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {ollamaReachable
+                        ? `Listening on ${draft.baseUrl}`
+                        : "Start the Ollama server to enable AI chat."}
+                    </p>
+                  </div>
+                </div>
+
+                {!ollamaReachable && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="shrink-0 gap-2"
+                    onClick={handleStartOllama}
+                    disabled={startState === "launching" || startState === "waiting"}
+                  >
+                    {startState === "launching" || startState === "waiting" ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
+                        {startState === "launching" ? "Launching…" : "Waiting…"}
+                      </>
+                    ) : (
+                      <>
+                        <Play className="size-4 fill-current" strokeWidth={0} />
+                        Start Ollama
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+
+              {startState === "error" && startError && (
+                <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm">
+                  <p className="font-medium text-destructive">Failed to start Ollama</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{startError}</p>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="ollama-url">Ollama base URL</Label>
