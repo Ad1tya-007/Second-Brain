@@ -124,7 +124,12 @@ export function AppShell() {
             />
           )}
           {view === 'library' && (
-            <LibraryWorkspace docs={mockDocs} focusedDocName={focusedDocName} />
+            <LibraryWorkspace
+              docs={mockDocs}
+              focusedDocName={focusedDocName}
+              ollamaSettings={settings}
+              ollamaReachable={ollamaReachable}
+            />
           )}
           {view === 'settings' && (
             <SettingsWorkspace

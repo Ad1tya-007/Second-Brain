@@ -476,7 +476,6 @@ export const mockDocs: SourceDoc[] = [
   {
     id: '1',
     name: 'system-design-notes',
-    ext: '.md',
     state: 'ready',
     chunks: 42,
     updatedAt: '2026-04-04T14:22:00',
@@ -484,7 +483,6 @@ export const mockDocs: SourceDoc[] = [
   {
     id: '2',
     name: 'react-hooks-cheatsheet',
-    ext: '.md',
     state: 'ready',
     chunks: 18,
     updatedAt: '2026-04-03T09:10:00',
@@ -492,7 +490,6 @@ export const mockDocs: SourceDoc[] = [
   {
     id: '3',
     name: 'machine-learning-fundamentals',
-    ext: '.md',
     state: 'ready',
     chunks: 31,
     updatedAt: '2026-04-02T15:45:00',
@@ -500,7 +497,6 @@ export const mockDocs: SourceDoc[] = [
   {
     id: '4',
     name: 'startup-ideas-brainstorm',
-    ext: '.md',
     state: 'ready',
     chunks: 14,
     updatedAt: '2026-04-01T10:30:00',
@@ -508,7 +504,6 @@ export const mockDocs: SourceDoc[] = [
   {
     id: '5',
     name: 'books-and-papers-2026',
-    ext: '.md',
     state: 'ready',
     chunks: 22,
     updatedAt: '2026-03-28T09:00:00',
@@ -516,7 +511,6 @@ export const mockDocs: SourceDoc[] = [
   {
     id: '6',
     name: 'workout-and-health-log',
-    ext: '.md',
     state: 'ready',
     chunks: 19,
     updatedAt: '2026-04-05T07:15:00',
@@ -524,7 +518,6 @@ export const mockDocs: SourceDoc[] = [
   {
     id: '7',
     name: 'travel-notes-japan',
-    ext: '.md',
     state: 'ready',
     chunks: 16,
     updatedAt: '2026-03-22T20:00:00',
@@ -532,7 +525,6 @@ export const mockDocs: SourceDoc[] = [
   {
     id: '8',
     name: 'typescript-advanced-patterns',
-    ext: '.md',
     state: 'ready',
     chunks: 24,
     updatedAt: '2026-03-30T11:20:00',
@@ -540,7 +532,6 @@ export const mockDocs: SourceDoc[] = [
   {
     id: '9',
     name: 'reading-list-2026',
-    ext: '.txt',
     state: 'processing',
     chunks: 0,
     updatedAt: '2026-04-05T11:01:00',
@@ -548,7 +539,6 @@ export const mockDocs: SourceDoc[] = [
   {
     id: '10',
     name: 'draft-ideas',
-    ext: '.md',
     state: 'failed',
     chunks: 0,
     updatedAt: '2026-04-01T16:40:00',

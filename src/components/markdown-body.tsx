@@ -1,40 +1,48 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { cn } from "@/lib/utils";
 
 type MarkdownBodyProps = {
   content: string;
+  /** Smaller text sizes for compact contexts (e.g. AI chat panel). */
+  compact?: boolean;
   className?: string;
 };
 
-export function MarkdownBody({ content, className }: MarkdownBodyProps) {
+export function MarkdownBody({ content, compact = false, className }: MarkdownBodyProps) {
+  const prose = compact ? "text-xs" : "text-[15px]";
   return (
-    <div className={className}>
+    <div className={cn(className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ children }) => (
-            <h1 className="mb-3 text-lg font-semibold tracking-tight">{children}</h1>
+            <h1 className={cn("mb-2 font-semibold tracking-tight", compact ? "text-sm" : "mb-3 text-lg")}>
+              {children}
+            </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="mb-2 mt-4 text-base font-semibold tracking-tight first:mt-0">
+            <h2 className={cn("mb-1.5 mt-3 font-semibold tracking-tight first:mt-0", compact ? "text-xs" : "mb-2 mt-4 text-base")}>
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="mb-2 mt-3 text-sm font-semibold">{children}</h3>
+            <h3 className={cn("mb-1 mt-2 font-semibold", compact ? "text-xs" : "mb-2 mt-3 text-sm")}>
+              {children}
+            </h3>
           ),
           p: ({ children }) => (
-            <p className="mb-3 text-[15px] leading-relaxed text-foreground last:mb-0">
+            <p className={cn("mb-2 leading-relaxed text-foreground last:mb-0", prose)}>
               {children}
             </p>
           ),
           ul: ({ children }) => (
-            <ul className="mb-3 list-disc space-y-1 pl-5 text-[15px] leading-relaxed last:mb-0">
+            <ul className={cn("mb-2 list-disc space-y-0.5 pl-4 leading-relaxed last:mb-0", prose)}>
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="mb-3 list-decimal space-y-1 pl-5 text-[15px] leading-relaxed last:mb-0">
+            <ol className={cn("mb-2 list-decimal space-y-0.5 pl-4 leading-relaxed last:mb-0", prose)}>
               {children}
             </ol>
           ),
@@ -52,10 +60,10 @@ export function MarkdownBody({ content, className }: MarkdownBodyProps) {
               {children}
             </a>
           ),
-          code: ({ className, children }) => {
-            const isBlock = className?.includes("language-");
+          code: ({ className: cls, children }) => {
+            const isBlock = cls?.includes("language-");
             if (isBlock) {
-              return <code className={className}>{children}</code>;
+              return <code className={cls}>{children}</code>;
             }
             return (
               <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.85em] text-foreground">
@@ -64,20 +72,20 @@ export function MarkdownBody({ content, className }: MarkdownBodyProps) {
             );
           },
           pre: ({ children }) => (
-            <pre className="mb-3 overflow-x-auto rounded-lg border border-border bg-muted/60 p-3 text-sm last:mb-0">
+            <pre className="mb-2 overflow-x-auto rounded-lg border border-border bg-muted/60 p-2.5 text-xs last:mb-0">
               {children}
             </pre>
           ),
           table: ({ children }) => (
-            <div className="mb-3 overflow-x-auto last:mb-0">
-              <table className="w-full border-collapse text-sm">{children}</table>
+            <div className="mb-2 overflow-x-auto last:mb-0">
+              <table className="w-full border-collapse text-xs">{children}</table>
             </div>
           ),
           thead: ({ children }) => <thead className="border-b border-border">{children}</thead>,
           th: ({ children }) => (
-            <th className="px-2 py-1.5 text-left font-medium text-muted-foreground">{children}</th>
+            <th className="px-2 py-1 text-left font-medium text-muted-foreground">{children}</th>
           ),
-          td: ({ children }) => <td className="px-2 py-1.5 align-top">{children}</td>,
+          td: ({ children }) => <td className="px-2 py-1 align-top">{children}</td>,
         }}
       >
         {content}

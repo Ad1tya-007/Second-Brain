@@ -165,15 +165,17 @@ export function AskWorkspace({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1">
-      {/* Thread list */}
+      {/* Thread list — same chrome as Library → Notes sidebar */}
       <div className="flex w-[220px] shrink-0 flex-col border-r border-border bg-muted/20">
-        <div className="flex items-center justify-between gap-2 border-b border-border px-2 py-2">
-          <span className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Threads
-          </span>
-          <Button size="icon-xs" variant="ghost" onClick={onNewThread} aria-label="New thread">
-            <Plus className="size-4" strokeWidth={1.75} />
-          </Button>
+        <div className="border-b border-border">
+          <div className="flex items-center justify-between gap-2 px-2 py-2">
+            <span className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Threads
+            </span>
+            <Button size="icon-xs" variant="ghost" onClick={onNewThread} aria-label="New thread">
+              <Plus className="size-4" strokeWidth={1.75} />
+            </Button>
+          </div>
         </div>
         <ScrollArea className="min-h-0 flex-1">
           <div className="p-1.5">

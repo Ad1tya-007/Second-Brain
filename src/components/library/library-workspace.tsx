@@ -1,332 +1,293 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  FolderPlus,
-  Loader2,
-  Search,
-  Upload,
-} from "lucide-react";
+import { Edit3, FileText, Plus, Search } from "lucide-react";
 
 import { MarkdownBody } from "@/components/markdown-body";
+import { NoteEditor } from "@/components/library/note-editor";
 import { noteContents } from "@/data/mock";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { IndexState, SourceDoc } from "@/types/domain";
+import type { OllamaSettings } from "@/hooks/use-ollama-settings";
+import type { Note, SourceDoc } from "@/types/domain";
 import { cn } from "@/lib/utils";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Convert a filename slug to a human-readable title. */
+function slugToTitle(slug: string): string {
+  return slug
+    .replace(/\.md$/, "")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Get the first non-empty line of content as a preview snippet. */
+function contentSnippet(content: string, maxLen = 90): string {
+  const lines = content.split("\n").map((l) => l.trim());
+  const meaningful = lines.find((l) => l && !l.startsWith("#"));
+  if (!meaningful) return "";
+  return meaningful.length > maxLen ? meaningful.slice(0, maxLen) + "…" : meaningful;
+}
+
+/** Initialize the notes list from mock noteContents + doc metadata. */
+function buildInitialNotes(docs: SourceDoc[]): Note[] {
+  return Object.entries(noteContents).map(([filename, content], i) => {
+    const slug = filename.replace(/\.md$/, "");
+    const doc = docs.find((d) => d.name === slug);
+    const ts = doc?.updatedAt ?? new Date().toISOString();
+    return {
+      id: `note-${i + 1}`,
+      title: slugToTitle(filename),
+      content,
+      createdAt: ts,
+      updatedAt: ts,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
 
 type LibraryWorkspaceProps = {
   docs: SourceDoc[];
-  /** docTitle from a citation (e.g. "system-design-notes.md") — auto-selects that row. */
   focusedDocName?: string | null;
+  ollamaSettings: OllamaSettings;
+  ollamaReachable: boolean;
 };
 
-const EMPTY_PREVIEW = `*Select a document to preview its content.*`;
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
-function stateBadge(state: IndexState) {
-  switch (state) {
-    case "ready":
-      return (
-        <Badge variant="secondary" className="gap-1 font-normal">
-          <CheckCircle2 className="size-3 text-emerald-600 dark:text-emerald-400" strokeWidth={2} />
-          Ready
-        </Badge>
-      );
-    case "processing":
-      return (
-        <Badge variant="secondary" className="gap-1 font-normal">
-          <Loader2 className="size-3 animate-spin" strokeWidth={2} />
-          Processing
-        </Badge>
-      );
-    case "queued":
-      return (
-        <Badge variant="secondary" className="gap-1 font-normal">
-          <Clock className="size-3" strokeWidth={2} />
-          Queued
-        </Badge>
-      );
-    case "failed":
-      return (
-        <Badge variant="destructive" className="gap-1 font-normal">
-          <AlertCircle className="size-3" strokeWidth={2} />
-          Failed
-        </Badge>
-      );
-    default:
-      return null;
-  }
-}
-
-export function LibraryWorkspace({ docs, focusedDocName }: LibraryWorkspaceProps) {
+export function LibraryWorkspace({
+  docs,
+  focusedDocName,
+  ollamaSettings,
+  ollamaReachable,
+}: LibraryWorkspaceProps) {
+  const [notes, setNotes] = useState<Note[]>(() => buildInitialNotes(docs));
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState("name");
-  const [selectedId, setSelectedId] = useState<string | null>(docs[0]?.id ?? null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [dragOver, setDragOver] = useState(false);
-  const focusedRowRef = useRef<HTMLButtonElement | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(notes[0]?.id ?? null);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
 
-  // When a focusedDocName arrives (from a citation click), select that doc.
+  const selectedRowRef = useRef<HTMLButtonElement | null>(null);
+
+  // Handle citation navigation — select note without auto-opening editor
   useEffect(() => {
     if (!focusedDocName) return;
-    // Match by "name.ext" or just "name"
-    const match = docs.find(
-      (d) =>
-        `${d.name}${d.ext}` === focusedDocName ||
-        d.name === focusedDocName.replace(/\.md$|\.txt$/, "")
+    const slug = focusedDocName.replace(/\.md$/, "");
+    const match = notes.find(
+      (n) =>
+        n.title.toLowerCase() === slugToTitle(focusedDocName).toLowerCase() ||
+        n.title.toLowerCase().replace(/\s+/g, "-") === slug,
     );
     if (match) {
       setSelectedId(match.id);
-      // Scroll the row into view after the render.
-      window.setTimeout(() => focusedRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+      window.setTimeout(
+        () => selectedRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+        60,
+      );
     }
-  }, [focusedDocName, docs]);
+  }, [focusedDocName, notes]);
 
   const filtered = useMemo(() => {
-    let list = docs.filter((d) =>
-      d.name.toLowerCase().includes(query.trim().toLowerCase())
+    const q = query.trim().toLowerCase();
+    if (!q) return notes;
+    return notes.filter(
+      (n) => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q),
     );
-    list = [...list].sort((a, b) => {
-      if (sort === "name") return a.name.localeCompare(b.name);
-      if (sort === "date") return b.updatedAt.localeCompare(a.updatedAt);
-      return 0;
-    });
-    return list;
-  }, [docs, query, sort]);
+  }, [notes, query]);
 
-  const selected = docs.find((d) => d.id === selectedId) ?? null;
+  const selected = notes.find((n) => n.id === selectedId) ?? null;
 
-  const toggleRow = (id: string, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
+  const handleNew = () => {
+    const newNote: Note = {
+      id: `note-${Date.now()}`,
+      title: "",
+      content: "",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setNotes((prev) => [newNote, ...prev]);
+    setEditingNote(newNote);
   };
 
-  const toggleAll = (checked: boolean) => {
-    if (checked) setSelectedIds(new Set(filtered.map((d) => d.id)));
-    else setSelectedIds(new Set());
+  const handleOpen = (note: Note) => setEditingNote(note);
+
+  const handleSave = (updated: Note) => {
+    setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
+    setEditingNote(updated);
+    setSelectedId(updated.id);
   };
 
+  const handleBack = () => {
+    setEditingNote(null);
+  };
+
+  // ── Editor mode ────────────────────────────────────────────────────────────
+  if (editingNote) {
+    return (
+      <NoteEditor
+        note={editingNote}
+        ollamaSettings={ollamaSettings}
+        ollamaReachable={ollamaReachable}
+        onSave={handleSave}
+        onBack={handleBack}
+      />
+    );
+  }
+
+  // ── List mode ──────────────────────────────────────────────────────────────
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="border-b border-border px-4 py-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-sm font-semibold">Library</h1>
-            <p className="text-xs text-muted-foreground">
-              Add sources and track indexing status. All files stay on this Mac.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" className="gap-1.5">
-              <Upload className="size-3.5" strokeWidth={1.75} />
-              Add files…
-            </Button>
-            <Button size="sm" variant="outline" className="gap-1.5">
-              <FolderPlus className="size-3.5" strokeWidth={1.75} />
-              Add folder…
+    <div className="flex min-h-0 min-w-0 flex-1">
+      {/* Left: note list — matches Ask sidebar (width, chrome, list rows) */}
+      <div className="flex w-[220px] shrink-0 flex-col border-r border-border bg-muted/20">
+        <div className="border-b border-border">
+          <div className="flex items-center justify-between gap-2 px-2 py-2">
+            <span className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Notes
+            </span>
+            <Button size="icon-xs" variant="ghost" onClick={handleNew} aria-label="New note">
+              <Plus className="size-4" strokeWidth={1.75} />
             </Button>
           </div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[200px] flex-1">
-            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter by filename…"
-              className="pl-9"
-              aria-label="Filter documents"
-            />
-          </div>
-          <Select
-            value={sort}
-            onValueChange={(v) => {
-              if (v) setSort(v);
-            }}
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Sort" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="date">Last updated</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-xs">
-          <span className="text-muted-foreground">{selectedIds.size} selected</span>
-          <Button size="xs" variant="secondary">
-            Re-index
-          </Button>
-          <Button size="xs" variant="outline">
-            Remove from index
-          </Button>
-          <Button size="xs" variant="ghost">
-            Reveal in Finder
-          </Button>
-        </div>
-      )}
-
-      <div className="flex min-h-0 flex-1">
-        <div
-          className={cn(
-            "relative flex min-w-0 flex-1 flex-col border-r border-border bg-muted/15 transition-colors",
-            dragOver && "bg-primary/5 ring-2 ring-primary/20 ring-inset"
-          )}
-          onDragEnter={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOver(true);
-          }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setDragOver(false);
-          }}
-        >
-          {dragOver && (
-            <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-              <p className="text-sm font-medium">Drop files to enqueue indexing</p>
-            </div>
-          )}
-          <div className="grid grid-cols-[28px_1fr_80px_100px_88px_120px] gap-2 border-b border-border px-3 py-2 text-[11px] font-medium text-muted-foreground">
-            <div className="flex items-center justify-center">
-              <Checkbox
-                checked={
-                  filtered.length > 0 && selectedIds.size === filtered.length
-                }
-                onCheckedChange={(v) => toggleAll(!!v)}
-                aria-label="Select all"
+          <div className="px-2 pb-2">
+            <div className="relative">
+              <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search…"
+                className="h-8 pl-8 text-sm"
+                aria-label="Search notes"
               />
             </div>
-            <span>Name</span>
-            <span>Type</span>
-            <span>State</span>
-            <span className="text-right">Chunks</span>
-            <span className="text-right">Updated</span>
           </div>
-          <ScrollArea className="min-h-0 flex-1">
-            <div role="rowgroup">
-              {filtered.length === 0 ? (
-                <div className="p-8 text-center">
-                  <p className="text-sm font-medium">No sources yet</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Add markdown or text files to build your private index. Everything is processed
-                    locally.
-                  </p>
-                  <div className="mt-4 flex justify-center gap-2">
-                    <Button size="sm">Add files</Button>
-                    <Button size="sm" variant="outline">
-                      How indexing works
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                filtered.map((doc) => (
+        </div>
+
+        <ScrollArea className="min-h-0 flex-1">
+          {filtered.length === 0 ? (
+            <div className="p-4 text-center">
+              <FileText className="mx-auto mb-2 size-8 text-muted-foreground/40" strokeWidth={1.25} />
+              <p className="text-sm text-muted-foreground">
+                {query ? "No notes match your search." : "No notes yet."}
+              </p>
+              {!query && (
+                <Button size="sm" className="mt-3" onClick={handleNew}>
+                  New note
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="p-1.5">
+              {filtered.map((note) => {
+                const snippet = contentSnippet(note.content);
+                return (
                   <button
-                    key={doc.id}
+                    key={note.id}
                     type="button"
-                    role="row"
-                    ref={doc.id === selectedId ? focusedRowRef : null}
-                    onClick={() => setSelectedId(doc.id)}
+                    ref={note.id === selectedId ? selectedRowRef : null}
+                    onClick={() => setSelectedId(note.id)}
+                    onDoubleClick={() => handleOpen(note)}
                     className={cn(
-                      "grid w-full grid-cols-[28px_1fr_80px_100px_88px_120px] gap-2 border-b border-border px-3 py-2.5 text-left text-sm transition-colors",
-                      selectedId === doc.id
-                        ? "bg-background ring-1 ring-inset ring-primary/20"
-                        : "hover:bg-muted/40"
+                      "mb-1 w-full rounded-md px-2 py-2 text-left text-sm transition-colors",
+                      selectedId === note.id
+                        ? "bg-background font-medium text-foreground shadow-sm ring-1 ring-border"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                     )}
                   >
-                    <span
-                      className="flex items-center justify-center"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Checkbox
-                        checked={selectedIds.has(doc.id)}
-                        onCheckedChange={(v) => toggleRow(doc.id, !!v)}
-                        aria-label={`Select ${doc.name}`}
-                      />
-                    </span>
-                    <span className="truncate font-medium" title={doc.name}>
-                      {doc.name}
-                    </span>
-                    <span className="text-muted-foreground">{doc.ext}</span>
-                    <span>{stateBadge(doc.state)}</span>
-                    <span className="text-right tabular-nums text-muted-foreground">
-                      {doc.state === "ready" ? doc.chunks : "—"}
-                    </span>
-                    <span className="text-right text-xs text-muted-foreground">
-                      {new Date(doc.updatedAt).toLocaleDateString(undefined, {
+                    <div className="flex items-start justify-between gap-1.5">
+                      <span
+                        className={cn(
+                          "line-clamp-2 flex-1",
+                          !note.title && "italic text-muted-foreground",
+                        )}
+                      >
+                        {note.title || "Untitled note"}
+                      </span>
+                    </div>
+                    {snippet ? (
+                      <span className="mt-0.5 block line-clamp-2 text-[11px] font-normal text-muted-foreground">
+                        {snippet}
+                      </span>
+                    ) : null}
+                    <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                      {new Date(note.updatedAt).toLocaleString(undefined, {
                         month: "short",
                         day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </span>
                   </button>
-                ))
-              )}
+                );
+              })}
             </div>
-          </ScrollArea>
-        </div>
+          )}
+        </ScrollArea>
 
-        <div className="hidden w-[min(100%,420px)] shrink-0 flex-col border-l border-border bg-background lg:flex">
-          <div className="border-b border-border px-3 py-2">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Preview
-            </h2>
-            {selected && (
-              <p className="truncate text-sm font-medium" title={selected.name}>
-                {selected.name}
-                {selected.ext}
-              </p>
-            )}
-          </div>
-          <ScrollArea className="min-h-0 flex-1">
-            <div className="p-4">
-              {selected?.state === "failed" && selected.error && (
-                <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm">
-                  <p className="font-medium text-destructive">Indexing failed</p>
-                  <p className="mt-1 text-muted-foreground">{selected.error}</p>
-                  <div className="mt-2 flex gap-2">
-                    <Button size="sm" variant="secondary">Retry</Button>
-                    <Button size="sm" variant="outline">Remove</Button>
-                  </div>
-                </div>
-              )}
-              <MarkdownBody
-                content={
-                  selected
-                    ? noteContents[`${selected.name}${selected.ext}`] ?? EMPTY_PREVIEW
-                    : EMPTY_PREVIEW
-                }
-              />
-              {selected && (
-                <p className="mt-6 text-xs text-muted-foreground">
-                  Read-only preview · {selected.chunks > 0 ? `${selected.chunks} indexed chunks` : "not yet indexed"}
-                </p>
-              )}
-            </div>
-          </ScrollArea>
+        <div className="border-t border-border px-2 py-1.5 text-[11px] text-muted-foreground">
+          {notes.length} {notes.length === 1 ? "note" : "notes"}
         </div>
+      </div>
+
+      {/* Right: preview — matches Ask main column header + content width */}
+      <div className="flex min-w-0 flex-1 flex-col bg-background">
+        {selected ? (
+          <>
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-2">
+              <div className="min-w-0">
+                <h1 className="truncate text-sm font-semibold" title={selected.title}>
+                  {selected.title || "Untitled note"}
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  Updated{" "}
+                  {new Date(selected.updatedAt).toLocaleString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+              <Button size="sm" className="mt-0.5 shrink-0 gap-1.5" onClick={() => handleOpen(selected)}>
+                <Edit3 className="size-3.5" strokeWidth={1.75} />
+                Open in editor
+              </Button>
+            </div>
+
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="mx-auto max-w-[720px] px-4 py-4">
+                {selected.content ? (
+                  <MarkdownBody content={selected.content} />
+                ) : (
+                  <div className="rounded-xl border border-dashed border-border bg-muted/20 p-6">
+                    <p className="text-sm font-medium">Empty note</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Open the editor to write, or use the AI assistant to draft content.
+                    </p>
+                    <Button size="sm" className="mt-4 gap-1.5" onClick={() => handleOpen(selected)}>
+                      <Edit3 className="size-3.5" strokeWidth={1.75} />
+                      Open in editor
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4">
+            <FileText className="size-12 text-muted-foreground/20" strokeWidth={1} />
+            <p className="text-sm text-muted-foreground">Select a note to preview it</p>
+            <Button size="sm" variant="outline" className="gap-1.5" onClick={handleNew}>
+              <Plus className="size-4" strokeWidth={1.75} />
+              New note
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
