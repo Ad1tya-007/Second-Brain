@@ -19,7 +19,7 @@ export function StatusStrip({
   return (
     <div
       className={cn(
-        'flex shrink-0 items-center justify-between gap-3',
+        'flex flex-row items-center justify-between gap-3',
         !ollamaReachable && 'bg-amber-500/10',
       )}
       role="status">

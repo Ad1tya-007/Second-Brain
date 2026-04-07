@@ -65,6 +65,84 @@ export type OllamaModel = {
   size: number;
 };
 
+export type PullProgressPayload = {
+  status: string;
+  digest?: string;
+  total?: number;
+  completed?: number;
+  /** 0–100 */
+  percent: number;
+};
+
+/**
+ * Pull (download) a model via the Ollama HTTP API.
+ * Streams NDJSON progress and calls `onProgress` for each chunk.
+ * Throws on HTTP error or if the server reports an error in the stream.
+ */
+export async function pullOllamaModel(
+  baseUrl: string,
+  modelName: string,
+  onProgress: (p: PullProgressPayload) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch(`${baseUrl}/api/pull`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: modelName, stream: true }),
+    signal,
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Pull failed (${res.status}): ${text}`);
+  }
+  if (!res.body) throw new Error("No response body from Ollama.");
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let lastTotal = 0;
+  let lastCompleted = 0;
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    const lines = decoder.decode(value, { stream: true }).split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const chunk = JSON.parse(trimmed) as {
+          status?: string;
+          error?: string;
+          digest?: string;
+          total?: number;
+          completed?: number;
+        };
+        if (chunk.error) throw new Error(chunk.error);
+        if (chunk.total) lastTotal = chunk.total;
+        if (typeof chunk.completed === "number") lastCompleted = chunk.completed;
+        const percent =
+          chunk.status === "success"
+            ? 100
+            : lastTotal > 0
+              ? Math.min(99, Math.round((lastCompleted / lastTotal) * 100))
+              : 0;
+        onProgress({
+          status: chunk.status ?? "",
+          digest: chunk.digest,
+          total: chunk.total,
+          completed: chunk.completed,
+          percent,
+        });
+        if (chunk.status === "success") return;
+      } catch (e) {
+        const msg = (e as Error).message ?? "";
+        if (msg.startsWith("Pull failed") || msg.length > 0) throw e;
+      }
+    }
+  }
+}
+
 export type OllamaChatMessage = {
   role: "system" | "user" | "assistant";
   content: string;
@@ -85,6 +163,19 @@ export async function checkOllamaReachable(baseUrl: string): Promise<boolean> {
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+/** Delete (uninstall) a pulled model from Ollama. */
+export async function deleteOllamaModel(baseUrl: string, modelName: string): Promise<void> {
+  const res = await fetch(`${baseUrl}/api/delete`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: modelName }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Delete failed (${res.status}): ${text}`);
   }
 }
 

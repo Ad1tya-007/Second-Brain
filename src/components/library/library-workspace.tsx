@@ -1,15 +1,15 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Edit3, FileText, Plus, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Edit3, FileText, Plus, Search } from 'lucide-react';
 
-import { MarkdownBody } from "@/components/markdown-body";
-import { NoteEditor } from "@/components/library/note-editor";
-import { noteContents } from "@/data/mock";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import type { OllamaSettings } from "@/hooks/use-ollama-settings";
-import type { Note, SourceDoc } from "@/types/domain";
-import { cn } from "@/lib/utils";
+import { MarkdownBody } from '@/components/markdown-body';
+import { NoteEditor } from '@/components/library/note-editor';
+import { noteContents } from '@/data/mock';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import type { OllamaSettings } from '@/hooks/use-ollama-settings';
+import type { Note, SourceDoc } from '@/types/domain';
+import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -18,23 +18,25 @@ import { cn } from "@/lib/utils";
 /** Convert a filename slug to a human-readable title. */
 function slugToTitle(slug: string): string {
   return slug
-    .replace(/\.md$/, "")
-    .replace(/-/g, " ")
+    .replace(/\.md$/, '')
+    .replace(/-/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /** Get the first non-empty line of content as a preview snippet. */
 function contentSnippet(content: string, maxLen = 90): string {
-  const lines = content.split("\n").map((l) => l.trim());
-  const meaningful = lines.find((l) => l && !l.startsWith("#"));
-  if (!meaningful) return "";
-  return meaningful.length > maxLen ? meaningful.slice(0, maxLen) + "…" : meaningful;
+  const lines = content.split('\n').map((l) => l.trim());
+  const meaningful = lines.find((l) => l && !l.startsWith('#'));
+  if (!meaningful) return '';
+  return meaningful.length > maxLen
+    ? meaningful.slice(0, maxLen) + '…'
+    : meaningful;
 }
 
 /** Initialize the notes list from mock noteContents + doc metadata. */
 function buildInitialNotes(docs: SourceDoc[]): Note[] {
   return Object.entries(noteContents).map(([filename, content], i) => {
-    const slug = filename.replace(/\.md$/, "");
+    const slug = filename.replace(/\.md$/, '');
     const doc = docs.find((d) => d.name === slug);
     const ts = doc?.updatedAt ?? new Date().toISOString();
     return {
@@ -69,8 +71,10 @@ export function LibraryWorkspace({
   ollamaReachable,
 }: LibraryWorkspaceProps) {
   const [notes, setNotes] = useState<Note[]>(() => buildInitialNotes(docs));
-  const [query, setQuery] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(notes[0]?.id ?? null);
+  const [query, setQuery] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(
+    notes[0]?.id ?? null,
+  );
   const [editingNote, setEditingNote] = useState<Note | null>(null);
 
   const selectedRowRef = useRef<HTMLButtonElement | null>(null);
@@ -78,16 +82,20 @@ export function LibraryWorkspace({
   // Handle citation navigation — select note without auto-opening editor
   useEffect(() => {
     if (!focusedDocName) return;
-    const slug = focusedDocName.replace(/\.md$/, "");
+    const slug = focusedDocName.replace(/\.md$/, '');
     const match = notes.find(
       (n) =>
         n.title.toLowerCase() === slugToTitle(focusedDocName).toLowerCase() ||
-        n.title.toLowerCase().replace(/\s+/g, "-") === slug,
+        n.title.toLowerCase().replace(/\s+/g, '-') === slug,
     );
     if (match) {
       setSelectedId(match.id);
       window.setTimeout(
-        () => selectedRowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+        () =>
+          selectedRowRef.current?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          }),
         60,
       );
     }
@@ -97,7 +105,9 @@ export function LibraryWorkspace({
     const q = query.trim().toLowerCase();
     if (!q) return notes;
     return notes.filter(
-      (n) => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q),
+      (n) =>
+        n.title.toLowerCase().includes(q) ||
+        n.content.toLowerCase().includes(q),
     );
   }, [notes, query]);
 
@@ -106,8 +116,8 @@ export function LibraryWorkspace({
   const handleNew = () => {
     const newNote: Note = {
       id: `note-${Date.now()}`,
-      title: "",
-      content: "",
+      title: '',
+      content: '',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -150,7 +160,11 @@ export function LibraryWorkspace({
             <span className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               Notes
             </span>
-            <Button size="icon-xs" variant="ghost" onClick={handleNew} aria-label="New note">
+            <Button
+              size="icon-xs"
+              variant="ghost"
+              onClick={handleNew}
+              aria-label="New note">
               <Plus className="size-4" strokeWidth={1.75} />
             </Button>
           </div>
@@ -171,9 +185,12 @@ export function LibraryWorkspace({
         <ScrollArea className="min-h-0 flex-1">
           {filtered.length === 0 ? (
             <div className="p-4 text-center">
-              <FileText className="mx-auto mb-2 size-8 text-muted-foreground/40" strokeWidth={1.25} />
+              <FileText
+                className="mx-auto mb-2 size-8 text-muted-foreground/40"
+                strokeWidth={1.25}
+              />
               <p className="text-sm text-muted-foreground">
-                {query ? "No notes match your search." : "No notes yet."}
+                {query ? 'No notes match your search.' : 'No notes yet.'}
               </p>
               {!query && (
                 <Button size="sm" className="mt-3" onClick={handleNew}>
@@ -193,20 +210,18 @@ export function LibraryWorkspace({
                     onClick={() => setSelectedId(note.id)}
                     onDoubleClick={() => handleOpen(note)}
                     className={cn(
-                      "mb-1 w-full rounded-md px-2 py-2 text-left text-sm transition-colors",
+                      'mb-1 w-full rounded-md px-2 py-2 text-left text-sm transition-colors',
                       selectedId === note.id
-                        ? "bg-background font-medium text-foreground shadow-sm ring-1 ring-border"
-                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                    )}
-                  >
+                        ? 'bg-background font-medium text-foreground shadow-sm ring-1 ring-border'
+                        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                    )}>
                     <div className="flex items-start justify-between gap-1.5">
                       <span
                         className={cn(
-                          "line-clamp-2 flex-1",
-                          !note.title && "italic text-muted-foreground",
-                        )}
-                      >
-                        {note.title || "Untitled note"}
+                          'line-clamp-2 flex-1',
+                          !note.title && 'italic text-muted-foreground',
+                        )}>
+                        {note.title || 'Untitled note'}
                       </span>
                     </div>
                     {snippet ? (
@@ -216,10 +231,10 @@ export function LibraryWorkspace({
                     ) : null}
                     <span className="mt-0.5 block text-[11px] text-muted-foreground">
                       {new Date(note.updatedAt).toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
                       })}
                     </span>
                   </button>
@@ -230,7 +245,7 @@ export function LibraryWorkspace({
         </ScrollArea>
 
         <div className="border-t border-border px-2 py-1.5 text-[11px] text-muted-foreground">
-          {notes.length} {notes.length === 1 ? "note" : "notes"}
+          {notes.length} {notes.length === 1 ? 'note' : 'notes'}
         </div>
       </div>
 
@@ -240,36 +255,45 @@ export function LibraryWorkspace({
           <>
             <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border px-4 py-2">
               <div className="min-w-0">
-                <h1 className="truncate text-sm font-semibold" title={selected.title}>
-                  {selected.title || "Untitled note"}
+                <h1
+                  className="truncate text-sm font-semibold"
+                  title={selected.title}>
+                  {selected.title || 'Untitled note'}
                 </h1>
                 <p className="text-xs text-muted-foreground">
-                  Updated{" "}
+                  Updated{' '}
                   {new Date(selected.updatedAt).toLocaleString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
                   })}
                 </p>
               </div>
-              <Button size="sm" className="mt-0.5 shrink-0 gap-1.5" onClick={() => handleOpen(selected)}>
+              <Button
+                size="sm"
+                className="mt-0.5 shrink-0 gap-1.5"
+                onClick={() => handleOpen(selected)}>
                 <Edit3 className="size-3.5" strokeWidth={1.75} />
                 Open in editor
               </Button>
             </div>
 
             <ScrollArea className="min-h-0 flex-1">
-              <div className="mx-auto max-w-[720px] px-4 py-4">
+              <div className="py-8 px-16">
                 {selected.content ? (
                   <MarkdownBody content={selected.content} />
                 ) : (
                   <div className="rounded-xl border border-dashed border-border bg-muted/20 p-6">
                     <p className="text-sm font-medium">Empty note</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Open the editor to write, or use the AI assistant to draft content.
+                      Open the editor to write, or use the AI assistant to draft
+                      content.
                     </p>
-                    <Button size="sm" className="mt-4 gap-1.5" onClick={() => handleOpen(selected)}>
+                    <Button
+                      size="sm"
+                      className="mt-4 gap-1.5"
+                      onClick={() => handleOpen(selected)}>
                       <Edit3 className="size-3.5" strokeWidth={1.75} />
                       Open in editor
                     </Button>
@@ -280,9 +304,18 @@ export function LibraryWorkspace({
           </>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4">
-            <FileText className="size-12 text-muted-foreground/20" strokeWidth={1} />
-            <p className="text-sm text-muted-foreground">Select a note to preview it</p>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={handleNew}>
+            <FileText
+              className="size-12 text-muted-foreground/20"
+              strokeWidth={1}
+            />
+            <p className="text-sm text-muted-foreground">
+              Select a note to preview it
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={handleNew}>
               <Plus className="size-4" strokeWidth={1.75} />
               New note
             </Button>
