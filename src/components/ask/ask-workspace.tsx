@@ -341,7 +341,7 @@ export function AskWorkspace({
               or check Settings → Models.
             </div>
           )}
-          <div className="mx-auto flex max-w-[720px] gap-2">
+          <div className="flex gap-2 px-16 py-2">
             <Textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
