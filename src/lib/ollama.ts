@@ -17,6 +17,11 @@ export async function startOllama(): Promise<void> {
   await invoke("start_ollama");
 }
 
+/** Ask the Rust backend to stop the Ollama process (killall / taskkill). */
+export async function stopOllama(): Promise<void> {
+  await invoke("stop_ollama");
+}
+
 export type OllamaModel = {
   name: string;
   modified_at: string;

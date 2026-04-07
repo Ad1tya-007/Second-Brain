@@ -1,7 +1,7 @@
-import { Cpu, Database, WifiOff } from "lucide-react";
+import { Cpu, Database, WifiOff } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 type StatusStripProps = {
   ollamaReachable: boolean;
@@ -19,20 +19,27 @@ export function StatusStrip({
   return (
     <div
       className={cn(
-        "flex shrink-0 items-center justify-between gap-3 border-b border-border px-3 py-2",
-        !ollamaReachable && "bg-amber-500/10"
+        'flex shrink-0 items-center justify-between gap-3',
+        !ollamaReachable && 'bg-amber-500/10',
       )}
-      role="status"
-    >
-      <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      role="status">
+      <div className="px-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           {ollamaReachable ? (
-            <Cpu className="size-3.5 text-primary" strokeWidth={1.75} aria-hidden />
+            <Cpu
+              className="size-3.5 text-primary"
+              strokeWidth={1.75}
+              aria-hidden
+            />
           ) : (
-            <WifiOff className="size-3.5 text-amber-700 dark:text-amber-400" strokeWidth={1.75} aria-hidden />
+            <WifiOff
+              className="size-3.5 text-amber-700 dark:text-amber-400"
+              strokeWidth={1.75}
+              aria-hidden
+            />
           )}
           <span className="font-medium text-foreground">
-            {ollamaReachable ? "Ollama" : "Ollama unreachable"}
+            {ollamaReachable ? 'Ollama' : 'Ollama unreachable'}
           </span>
           <span className="text-muted-foreground">·</span>
           <span className="truncate" title={llmModel}>
@@ -40,7 +47,11 @@ export function StatusStrip({
           </span>
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <Database className="size-3.5 opacity-70" strokeWidth={1.75} aria-hidden />
+          <Database
+            className="size-3.5 opacity-70"
+            strokeWidth={1.75}
+            aria-hidden
+          />
           <span className="truncate" title={embedModel}>
             Embeddings {embedModel}
           </span>

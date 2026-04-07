@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, CircleDot, Loader2, Moon, Play, Sun, Trash2, WifiOff } from "lucide-react";
+import { CircleDot, Loader2, Moon, Play, Square, Sun, Trash2, WifiOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import type { OllamaSettings } from "@/hooks/use-ollama-settings";
-import { checkOllamaReachable, listOllamaModels, startOllama, type OllamaModel } from "@/lib/ollama";
+import {
+  checkOllamaReachable,
+  listOllamaModels,
+  startOllama,
+  stopOllama,
+  type OllamaModel,
+} from "@/lib/ollama";
 import { cn } from "@/lib/utils";
 
 const sections = [
@@ -57,21 +63,49 @@ export function SettingsWorkspace({
   // Local draft for the models form so changes aren't saved until "Save".
   const [draft, setDraft] = useState<OllamaSettings>({ ...settings });
 
-  // Connection test state.
-  type TestState = "idle" | "testing" | "ok" | "fail";
-  const [testState, setTestState] = useState<TestState>("idle");
   const [pulledModels, setPulledModels] = useState<OllamaModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
 
-  // Start Ollama state.
+  // Start / stop Ollama state.
   type StartState = "idle" | "launching" | "waiting" | "error";
   const [startState, setStartState] = useState<StartState>("idle");
   const [startError, setStartError] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  type StopState = "idle" | "stopping" | "error";
+  const [stopState, setStopState] = useState<StopState>("idle");
+  const [stopError, setStopError] = useState<string | null>(null);
+  const pollRef = useRef<number | null>(null);
 
-  // Clear any lingering poll on unmount.
-  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+  const clearPoll = () => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  };
+
+  useEffect(() => () => clearPoll(), []);
+
+  // When Ollama is reachable and Models is open, refresh the pulled-models list (replaces "Test connection").
+  useEffect(() => {
+    if (active !== "models" || !ollamaReachable) {
+      if (active === "models" && !ollamaReachable) setPulledModels([]);
+      return;
+    }
+    let cancelled = false;
+    setModelsLoading(true);
+    listOllamaModels(draft.baseUrl)
+      .then((models) => {
+        if (!cancelled) setPulledModels(models);
+      })
+      .finally(() => {
+        if (!cancelled) setModelsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [active, ollamaReachable, draft.baseUrl]);
 
   const handleStartOllama = async () => {
+    clearPoll();
     setStartState("launching");
     setStartError(null);
     try {
@@ -82,37 +116,50 @@ export function SettingsWorkspace({
       return;
     }
 
-    // Poll until the server is up (up to ~20 s).
     setStartState("waiting");
     let attempts = 0;
-    pollRef.current = setInterval(async () => {
+    pollRef.current = window.setInterval(async () => {
       attempts++;
       const ok = await checkOllamaReachable(draft.baseUrl);
       if (ok) {
-        clearInterval(pollRef.current!);
-        pollRef.current = null;
+        clearPoll();
         onOllamaReachableChange(true);
         setStartState("idle");
       } else if (attempts >= 20) {
-        clearInterval(pollRef.current!);
-        pollRef.current = null;
+        clearPoll();
         setStartState("error");
         setStartError("Ollama launched but did not respond within 20 seconds.");
       }
     }, 1000);
   };
 
-  const handleTestConnection = async () => {
-    setTestState("testing");
-    setPulledModels([]);
-    const ok = await checkOllamaReachable(draft.baseUrl);
-    if (ok) {
-      const models = await listOllamaModels(draft.baseUrl);
-      setPulledModels(models);
-      setTestState("ok");
-    } else {
-      setTestState("fail");
+  const handleStopOllama = async () => {
+    clearPoll();
+    setStopState("stopping");
+    setStopError(null);
+    try {
+      await stopOllama();
+    } catch (e) {
+      setStopState("error");
+      setStopError(String(e));
+      return;
     }
+
+    let attempts = 0;
+    pollRef.current = window.setInterval(async () => {
+      attempts++;
+      const ok = await checkOllamaReachable(draft.baseUrl);
+      if (!ok) {
+        clearPoll();
+        onOllamaReachableChange(false);
+        setPulledModels([]);
+        setStopState("idle");
+      } else if (attempts >= 30) {
+        clearPoll();
+        setStopState("error");
+        setStopError("Ollama did not shut down in time. Quit Ollama from the menu bar if it is still running.");
+      }
+    }, 500);
   };
 
   const handleSaveModels = () => {
@@ -263,33 +310,63 @@ export function SettingsWorkspace({
                   </div>
                 </div>
 
-                {!ollamaReachable && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="shrink-0 gap-2"
-                    onClick={handleStartOllama}
-                    disabled={startState === "launching" || startState === "waiting"}
-                  >
-                    {startState === "launching" || startState === "waiting" ? (
-                      <>
-                        <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
-                        {startState === "launching" ? "Launching…" : "Waiting…"}
-                      </>
-                    ) : (
-                      <>
-                        <Play className="size-4 fill-current" strokeWidth={0} />
-                        Start Ollama
-                      </>
-                    )}
-                  </Button>
-                )}
+                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                  {ollamaReachable ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="gap-2"
+                      onClick={handleStopOllama}
+                      disabled={stopState === "stopping" || startState === "launching" || startState === "waiting"}
+                    >
+                      {stopState === "stopping" ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
+                          Stopping…
+                        </>
+                      ) : (
+                        <>
+                          <Square className="size-4 fill-current" strokeWidth={0} />
+                          Stop Ollama
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="gap-2"
+                      onClick={handleStartOllama}
+                      disabled={startState === "launching" || startState === "waiting" || stopState === "stopping"}
+                    >
+                      {startState === "launching" || startState === "waiting" ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
+                          {startState === "launching" ? "Launching…" : "Waiting…"}
+                        </>
+                      ) : (
+                        <>
+                          <Play className="size-4 fill-current" strokeWidth={0} />
+                          Start Ollama
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {startState === "error" && startError && (
                 <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm">
                   <p className="font-medium text-destructive">Failed to start Ollama</p>
                   <p className="mt-1 text-xs text-muted-foreground">{startError}</p>
+                </div>
+              )}
+
+              {stopState === "error" && stopError && (
+                <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm">
+                  <p className="font-medium text-destructive">Failed to stop Ollama</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{stopError}</p>
                 </div>
               )}
 
@@ -322,37 +399,23 @@ export function SettingsWorkspace({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="gap-2"
-                    onClick={handleTestConnection}
-                    disabled={testState === "testing"}
-                  >
-                    {testState === "testing" ? (
-                      <Loader2 className="size-4 animate-spin" strokeWidth={1.75} />
-                    ) : testState === "ok" ? (
-                      <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" strokeWidth={1.75} />
-                    ) : testState === "fail" ? (
-                      <WifiOff className="size-4 text-destructive" strokeWidth={1.75} />
-                    ) : (
-                      <CheckCircle2 className="size-4" strokeWidth={1.75} />
-                    )}
-                    Test connection
-                  </Button>
                   <Button type="button" onClick={handleSaveModels}>
                     Save
                   </Button>
                 </div>
 
-                {testState === "ok" && (
+                {ollamaReachable && (
                   <div className="rounded-lg border border-emerald-400/30 bg-emerald-500/10 p-3">
                     <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                      Ollama is reachable
+                      {modelsLoading ? "Loading models…" : "Pulled models on this machine"}
                     </p>
-                    {pulledModels.length > 0 ? (
+                    {modelsLoading ? (
+                      <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="size-3.5 animate-spin" strokeWidth={1.75} />
+                        Fetching from Ollama…
+                      </div>
+                    ) : pulledModels.length > 0 ? (
                       <div className="mt-2 space-y-1">
-                        <p className="text-xs text-muted-foreground">Pulled models:</p>
                         <ul className="space-y-0.5">
                           {pulledModels.map((m) => (
                             <li key={m.name} className="flex items-center justify-between text-xs">
@@ -375,16 +438,6 @@ export function SettingsWorkspace({
                     ) : (
                       <p className="mt-1 text-xs text-muted-foreground">No local models found.</p>
                     )}
-                  </div>
-                )}
-
-                {testState === "fail" && (
-                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm">
-                    <p className="font-medium text-destructive">Cannot reach Ollama</p>
-                    <p className="mt-1 text-muted-foreground">
-                      Make sure Ollama is running:{" "}
-                      <code className="rounded bg-muted px-1 font-mono text-xs">ollama serve</code>
-                    </p>
                   </div>
                 )}
               </div>

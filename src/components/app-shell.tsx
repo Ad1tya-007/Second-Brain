@@ -5,8 +5,7 @@ import { LibraryWorkspace } from '@/components/library/library-workspace';
 import { NavRail, type AppView } from '@/components/nav-rail';
 import { SettingsWorkspace } from '@/components/settings/settings-workspace';
 import { StatusStrip } from '@/components/status-strip';
-import { TitleBar } from '@/components/title-bar';
-import { mockDocs, mockThreads } from '@/data/mock';
+import { mockDocs } from '@/data/mock';
 import { useOllamaSettings } from '@/hooks/use-ollama-settings';
 import { useTheme } from '@/hooks/use-theme';
 import { checkOllamaReachable } from '@/lib/ollama';
@@ -17,7 +16,7 @@ export function AppShell() {
   const { matchSystem, manualTheme, setMatchSystem, setManualTheme } =
     useTheme();
   const [view, setView] = useState<AppView>('ask');
-  const [threads, setThreads] = useState<Thread[]>(mockThreads);
+  const [threads, setThreads] = useState<Thread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState('t1');
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
     null,
@@ -97,13 +96,27 @@ export function AppShell() {
 
   return (
     <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-background text-foreground">
-      <TitleBar />
-      <StatusStrip
-        ollamaReachable={ollamaReachable}
-        llmModel={settings.llmModel}
-        embedModel={settings.embedModel}
-        onOpenSettings={onOpenSettings}
-      />
+      <header
+        className="flex flex-row justify-between items-center h-10 shrink-0 border-b border-border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 px-3"
+        data-tauri-drag-region>
+        <div
+          className="flex flex-row items-center gap-2"
+          data-tauri-drag-region>
+          <span className="truncate text-xs font-medium text-muted-foreground">
+            Local Second Brain
+          </span>
+          <span className="hidden text-xs text-muted-foreground/70 sm:inline">
+            · on-device knowledge
+          </span>
+        </div>
+        <StatusStrip
+          ollamaReachable={ollamaReachable}
+          llmModel={settings.llmModel}
+          embedModel={settings.embedModel}
+          onOpenSettings={onOpenSettings}
+        />
+      </header>
+
       <div className="flex min-h-0 flex-1">
         <NavRail active={view} onChange={setView} />
         <div className="flex min-w-0 flex-1">
