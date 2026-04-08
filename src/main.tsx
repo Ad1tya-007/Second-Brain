@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { Toaster } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { AuthProvider } from '@/contexts/auth-context';
 import App from './App';
 import './index.css';
 
@@ -47,25 +48,27 @@ function useDocumentTheme(): 'light' | 'dark' {
 function Root() {
   const theme = useDocumentTheme();
   return (
-    <TooltipProvider delay={200}>
-      <App />
-      <Toaster
-        position="top-right"
-        theme={theme}
-        gap={8}
-        toastOptions={{
-          classNames: {
-            toast: 'font-sans rounded-xl border shadow-md px-4 py-3 text-sm',
-            title: 'font-semibold tracking-tight text-[13px]',
-            description: 'text-[12px] mt-0.5 opacity-60',
-            success: '!border-emerald-500/20 [&_[data-icon]]:text-emerald-500',
-            error: '!border-destructive/20 [&_[data-icon]]:text-destructive',
-            closeButton: '!top-3 !right-3 opacity-50 hover:opacity-100',
-          },
-          duration: 4000,
-        }}
-      />
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider delay={200}>
+        <App />
+        <Toaster
+          position="top-right"
+          theme={theme}
+          gap={8}
+          toastOptions={{
+            classNames: {
+              toast: 'font-sans rounded-xl border shadow-md px-4 py-3 text-sm',
+              title: 'font-semibold tracking-tight text-[13px]',
+              description: 'text-[12px] mt-0.5 opacity-60',
+              success: '!border-emerald-500/20 [&_[data-icon]]:text-emerald-500',
+              error: '!border-destructive/20 [&_[data-icon]]:text-destructive',
+              closeButton: '!top-3 !right-3 opacity-50 hover:opacity-100',
+            },
+            duration: 4000,
+          }}
+        />
+      </TooltipProvider>
+    </AuthProvider>
   );
 }
 

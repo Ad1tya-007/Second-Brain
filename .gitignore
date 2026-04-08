@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ENV
+.env
+
+# mds
+*.mds
+!README.md
