@@ -16,6 +16,7 @@ import {
 import type { AuthUser } from '@/contexts/auth-context';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export type AppView = 'ask' | 'library' | 'settings';
 
@@ -49,23 +50,19 @@ function UserAvatar({ user }: { user: AuthUser }) {
         .toUpperCase()
     : user.email[0].toUpperCase();
 
-  if (user.avatarUrl && !imgError) {
-    return (
-      <img
-        src={user.avatarUrl}
-        alt={user.name ?? user.email}
-        onError={() => setImgError(true)}
-        className="size-7 rounded-full object-cover ring-1 ring-border"
-      />
-    );
-  }
-
   return (
-    <div className="flex size-7 items-center justify-center rounded-full bg-primary/10 ring-1 ring-border">
-      <span className="text-[11px] font-semibold leading-none text-primary">
+    <Avatar className="size-7">
+      {user.avatarUrl && !imgError && (
+        <AvatarImage
+          src={user.avatarUrl}
+          alt={user.name ?? user.email}
+          onError={() => setImgError(true)}
+        />
+      )}
+      <AvatarFallback className="text-[11px] font-semibold leading-none">
         {initials}
-      </span>
-    </div>
+      </AvatarFallback>
+    </Avatar>
   );
 }
 
