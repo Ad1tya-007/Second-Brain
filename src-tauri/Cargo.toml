@@ -30,4 +30,5 @@ mongodb = { version = "2", features = ["tokio-runtime"] }
 argon2 = { version = "0.5", features = ["std"] }
 jsonwebtoken = "9"
 base64 = "0.22"
+chrono = "0.4"
 

@@ -4,7 +4,11 @@ import {
   Bot,
   CheckCheck,
   ClipboardPaste,
+  Columns2,
+  Eye,
+  FileCode2,
   Loader2,
+  PenLine,
   SendHorizontal,
   Sparkles,
   Square,
@@ -46,6 +50,12 @@ type NoteEditorProps = {
 
 const QUICK_ACTIONS = [
   {
+    label: "Convert to Markdown",
+    icon: FileCode2,
+    prompt:
+      "The note may be written in plain text without any formatting. Convert it into clean, well-structured Markdown. Use headings (##, ###), bullet lists, bold/italic emphasis, and code blocks where appropriate. Preserve all original information — do not add or remove content. Return ONLY the converted note inside a ```markdown code block.",
+  },
+  {
     label: "Proofread",
     icon: CheckCheck,
     prompt:
@@ -82,7 +92,7 @@ function extractMarkdownBlock(text: string): string | null {
 }
 
 function buildNoteSystemPrompt(title: string, content: string): string {
-  return `You are an AI writing assistant helping a user edit their personal note.
+  return `You are an AI writing assistant helping a user edit their personal note. Many users write in plain text and do not know Markdown — when asked, help them convert their notes into properly formatted Markdown.
 
 Note title: "${title}"
 
@@ -92,8 +102,9 @@ ${content.trim() || "(empty note — help the user get started)"}
 ---
 
 Guidelines:
-- Help the user write, expand, proofread, or restructure their note.
-- When providing a rewritten/full-revision version, wrap it in a \`\`\`markdown code block so the user can apply it with one click.
+- Help the user write, expand, proofread, restructure, or convert their note to Markdown.
+- When converting to Markdown: use headings (##/###), bullet lists (- or *), bold (**text**), italic (*text*), inline code (\`code\`), and fenced code blocks (\`\`\`lang). Keep ALL original content intact.
+- When providing a rewritten or converted version, ALWAYS wrap it in a \`\`\`markdown code block so the user can apply it with one click.
 - For proofreading, list corrections clearly without rewriting the whole note unless asked.
 - Be concise and actionable. Respond in plain text or markdown.`;
 }
@@ -113,6 +124,9 @@ export function NoteEditor({
   const [content, setContent] = useState(note.content);
   const [dirty, setDirty] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  type ViewMode = 'edit' | 'split' | 'preview';
+  const [viewMode, setViewMode] = useState<ViewMode>('edit');
 
   // AI panel state
   const [aiOpen, setAiOpen] = useState(false);
@@ -145,11 +159,16 @@ export function NoteEditor({
     setLastSaved(new Date());
   }, [note, title, content, onSave]);
 
-  // Auto-save after 2 s of inactivity
+  // Ctrl/Cmd+S saves
   useEffect(() => {
-    if (!dirty) return;
-    const t = window.setTimeout(handleSave, 2000);
-    return () => clearTimeout(t);
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        if (dirty) handleSave();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [dirty, handleSave]);
 
   const sendToAi = useCallback(
@@ -223,6 +242,8 @@ export function NoteEditor({
   const handleApply = (applyContent: string) => {
     setContent(applyContent);
     setDirty(true);
+    // Switch to edit so the user can see the applied changes immediately
+    setViewMode('edit');
   };
 
   const handleStopAi = () => {
@@ -264,6 +285,36 @@ export function NoteEditor({
           {dirty && (
             <span className="text-[11px] text-amber-500 dark:text-amber-400">Unsaved</span>
           )}
+
+          {/* View mode toggle */}
+          <div className="flex overflow-hidden rounded-md border border-border" role="group" aria-label="View mode">
+            {(
+              [
+                { mode: 'edit' as const, icon: PenLine, label: 'Edit' },
+                { mode: 'split' as const, icon: Columns2, label: 'Split' },
+                { mode: 'preview' as const, icon: Eye, label: 'Preview' },
+              ] as const
+            ).map(({ mode, icon: Icon, label }, i) => (
+              <button
+                key={mode}
+                type="button"
+                aria-label={label}
+                title={label}
+                onClick={() => setViewMode(mode)}
+                className={cn(
+                  'flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium transition-colors',
+                  i > 0 && 'border-l border-border',
+                  viewMode === mode
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )}
+              >
+                <Icon className="size-3" strokeWidth={1.75} />
+                {label}
+              </button>
+            ))}
+          </div>
+
           <Button
             variant="ghost"
             size="sm"
@@ -277,7 +328,7 @@ export function NoteEditor({
             aria-pressed={aiOpen}
           >
             <Bot className="size-4" strokeWidth={1.75} />
-            AI Assistant
+            AI
           </Button>
           <Button size="sm" onClick={handleSave} disabled={!dirty}>
             Save
@@ -287,12 +338,18 @@ export function NoteEditor({
 
       {/* ── Body ────────────────────────────────────────────────────────── */}
       <div className="flex min-h-0 flex-1">
-        {/* Editor */}
-        <div className="flex min-h-0 flex-1 flex-col bg-background">
+        {/* Editor pane — hidden in preview mode */}
+        <div
+          className={cn(
+            "flex min-h-0 flex-col bg-background",
+            viewMode === 'preview' ? 'hidden' : 'flex-1',
+            viewMode === 'split' && 'border-r border-border',
+          )}
+        >
           <Textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder={`Start writing in Markdown…\n\nTip: use the AI Assistant to proofread, expand, or restructure this note.`}
+            placeholder={`Start writing…\n\nTip: plain text is fine — use the AI Assistant to convert it to Markdown, proofread, or expand it.`}
             className={cn(
               "min-h-0 flex-1 resize-none rounded-none border-0 bg-transparent px-8 py-6",
               "text-sm leading-relaxed text-foreground placeholder:text-muted-foreground/40",
@@ -301,6 +358,39 @@ export function NoteEditor({
             aria-label="Note content"
           />
         </div>
+
+        {/* Preview pane — shown in split and preview modes */}
+        {(viewMode === 'preview' || viewMode === 'split') && (
+          <div
+            className={cn(
+              "flex min-h-0 flex-col bg-background",
+              viewMode === 'preview' ? 'flex-1' : 'w-1/2 shrink-0',
+            )}
+          >
+            {/* Preview header strip */}
+            <div className="flex h-8 shrink-0 items-center border-b border-border bg-muted/30 px-8">
+              <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                <Eye className="size-3" strokeWidth={1.75} />
+                Preview
+              </span>
+            </div>
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="px-8 py-6">
+                {content.trim() ? (
+                  <MarkdownBody content={content} />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <Eye className="mb-3 size-8 text-muted-foreground/30" strokeWidth={1.25} />
+                    <p className="text-sm text-muted-foreground">Nothing to preview yet.</p>
+                    <p className="mt-1 text-xs text-muted-foreground/60">
+                      Start writing in the editor to see it rendered here.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
 
         {/* AI Assistant panel */}
         {aiOpen && (

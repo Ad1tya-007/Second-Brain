@@ -1,5 +1,7 @@
 mod auth;
+mod notes;
 mod ollama_install;
+mod threads;
 
 use std::process::{Command, Stdio};
 use tokio::sync::Mutex;
@@ -81,6 +83,15 @@ pub fn run() {
             auth::auth_register,
             auth::auth_login,
             auth::auth_google_exchange,
+            notes::list_notes,
+            notes::create_note,
+            notes::update_note,
+            notes::delete_note,
+            notes::embed_note,
+            notes::search_notes,
+            threads::list_threads,
+            threads::save_thread,
+            threads::delete_thread,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

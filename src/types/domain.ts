@@ -1,19 +1,12 @@
-export type IndexState = 'queued' | 'processing' | 'ready' | 'failed';
-
-export type SourceDoc = {
-  id: string;
-  name: string;
-  state: IndexState;
-  chunks: number;
-  updatedAt: string;
-  error?: string;
-};
 
 export type Citation = {
   id: string;
+  /** MongoDB note ID — used to navigate to the note. */
+  noteId: string;
   docTitle: string;
   excerpt: string;
   score: number;
+  searchType?: 'semantic' | 'keyword';
 };
 
 export type ChatMessage = {
@@ -30,12 +23,26 @@ export type Thread = {
   messages: ChatMessage[];
 };
 
+export type EmbedStatus = 'pending' | 'done' | 'no_ollama' | 'failed';
+
 export type Note = {
   id: string;
   title: string;
   content: string;
   createdAt: string;
   updatedAt: string;
+  embedStatus: EmbedStatus;
+};
+
+/** A single search result chunk returned by the Rust `search_notes` command. */
+export type SearchHit = {
+  noteId: string;
+  noteTitle: string;
+  /** The relevant passage from the note. */
+  chunk: string;
+  /** 0–1 similarity (semantic) or term-match ratio (keyword fallback). */
+  score: number;
+  searchType: 'semantic' | 'keyword';
 };
 
 export type ActivityItem = {
