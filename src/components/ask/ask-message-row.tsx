@@ -59,14 +59,9 @@ export function AskMessageRow({ message: m, onOpenNote }: AskMessageRowProps) {
                         key={c.noteId}
                         type="button"
                         onClick={() => onOpenNote(c.noteId)}
-                        className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-foreground">
+                        className="inline-flex items-center rounded-md border border-border bg-muted/60 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-primary/50 hover:bg-primary/5 hover:text-foreground">
                         <span className="max-w-[160px] truncate font-medium">
                           {c.docTitle}
-                        </span>
-                        <span className="shrink-0 rounded bg-background/80 px-1 py-px text-[10px] tabular-nums">
-                          {c.searchType === 'keyword'
-                            ? 'kw'
-                            : `${(c.score * 100).toFixed(0)}%`}
                         </span>
                       </button>
                     ))}

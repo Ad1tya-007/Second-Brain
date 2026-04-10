@@ -1,134 +1,98 @@
 # Second Brain
 
-A private, AI-powered knowledge assistant that lives entirely on your Mac. No subscriptions, no data leaving your device — your notes, indexed and searchable with a local AI.
+A fully on-device AI knowledge assistant built with **Rust + React + Tauri**. Write notes, ask questions in plain English, and get answers grounded in your own writing — no cloud, no API keys, no subscription.
 
 ---
 
-## What it does
+## Why this project
 
-Most people accumulate notes they never revisit. Second Brain turns those passive files into something you can talk to.
-
-Write your notes in the app, and they are automatically chunked and embedded into a vector database using a local embedding model. From there, ask questions in plain English and get answers grounded in _your own writing_.
-
-Ask things like:
-
-- _"What did I capture about caching strategies?"_
-- _"Summarize my current workout program and lifts"_
-- _"What books did I read this year and what were my takeaways?"_
-
-The AI retrieves the most relevant passages from your notes using semantic search, builds context from them, and shows you exactly which notes it used — with a similarity score for each one. Click any source to jump straight to the note.
+Most note-taking apps are passive archives. This app turns your notes into something you can actually query. Every note is automatically chunked, embedded into a vector database using a local embedding model, and made instantly searchable via semantic similarity. The AI never leaves your machine.
 
 ---
 
-## Key features
+## Demo: what you can ask
 
-- **On-device AI** — runs a local language model through [Ollama](https://ollama.com). No API keys, no cloud, no cost per query.
-- **RAG-powered answers** — Retrieval-Augmented Generation: before every reply, the app embeds your question, runs cosine similarity against all stored note chunks, and injects only the most relevant passages into the prompt. When no notes match, the AI says so and still gives a useful answer.
-- **Vector embeddings** — notes are chunked and embedded on save using `nomic-embed-text`. Embeddings are stored in MongoDB alongside the note content and queried at query time.
-- **Full note editor** — write in plain text or Markdown. AI assistant panel lets you convert to Markdown, proofread, expand, or add a summary — with one-click "Apply to note". Live split-pane preview.
-- **Persistent threads** — conversation threads are saved to MongoDB and restored on next launch. Delete threads you no longer need.
-- **Authentication** — email/password and Google OAuth sign-in, backed by MongoDB. JWT sessions persisted locally.
-- **Light and dark mode** — follows system preference with a manual override in Settings.
-- **Ollama management** — start, stop, and install Ollama from within the app. Pull or remove individual models from a built-in catalog.
+- *"What did I capture about distributed system design?"*
+- *"Summarize my current workout program"*
+- *"What books did I read this year and what were my takeaways?"*
+
+The AI retrieves the most relevant passages from your notes, builds a grounded system prompt from them, streams a response via a local LLM, and shows you exactly which notes it used. Click any source chip to jump straight to that note.
 
 ---
 
-## How the RAG pipeline works
+## Feature set
+
+| Area | What's built |
+|------|-------------|
+| **AI / RAG** | Semantic search via cosine similarity over 768-dim note-chunk embeddings; keyword fallback when Ollama is offline; grounded system prompt injection; streaming LLM response with per-message latency logging |
+| **Note editor** | Rich Markdown editor with live split-pane preview; AI writing assistant (proofread, expand, summarise, convert to Markdown) with one-click apply |
+| **Chat threads** | Persistent conversation threads stored as individual message documents in MongoDB; messages sorted by timestamp; full history restored on relaunch |
+| **Auth** | Email/password (Argon2 hashing) + Google OAuth; JWT sessions signed in Rust and persisted locally |
+| **Ollama management** | Start/stop the Ollama daemon, pull or remove models from a built-in catalog, and install Ollama from within the app |
+| **Settings** | Configurable LLM and embedding models; light/dark mode with system-preference sync |
+
+---
+
+## Architecture
 
 ```
-User query
-    │
-    ▼
-Embed query via Ollama (nomic-embed-text)
-    │
-    ▼
-Load all note chunks for this user from MongoDB
-    │
-    ▼
-Cosine similarity — rank every chunk against the query vector
-    │
-    ▼
-Top-k chunks (threshold: 0.25) injected into the system prompt
-    │
-    ▼
-Ollama LLM streams a grounded response
-    │
-    ▼
-Citations shown inline — click to open the source note
-
-Fallback: if Ollama is offline, keyword search is used instead
+┌─────────────────────────────────────────────────┐
+│  React + TypeScript (WebKit via Tauri)          │
+│  UI layer — chat, editor, settings              │
+└───────────────────┬─────────────────────────────┘
+                    │ invoke() — zero HTTP overhead
+┌───────────────────▼─────────────────────────────┐
+│  Rust (Tauri commands)                          │
+│  auth · notes · threads · messages              │
+│  Argon2 · JWT · reqwest · mongodb driver        │
+└───────────────────┬─────────────────────────────┘
+          ┌─────────┴──────────┐
+          ▼                    ▼
+    MongoDB Atlas        Ollama (local)
+   notes / chunks       LLM streaming
+   threads / messages   vector embeddings
+   users / auth
 ```
 
 ---
 
-## Built with
+## RAG pipeline
+
+```
+User question
+      │
+      ▼
+Embed question  ──▶  Ollama (nomic-embed-text, 768-dim)
+      │
+      ▼
+Cosine similarity over all note chunks for this user
+      │
+      ▼
+Top-k chunks (similarity ≥ 0.25) injected into system prompt
+      │
+      ▼
+Ollama LLM streams grounded answer  ──▶  latency recorded (ms)
+      │
+      ▼
+Source note chips shown inline  ──▶  click to open note
+
+Fallback: keyword scan across note titles + content
+          when semantic search returns no hits
+```
+
+---
+
+## Tech stack
 
 | Layer | Technology |
-| --- | --- |
-| Desktop shell | [Tauri](https://tauri.app) v2 (Rust + WebKit) |
-| UI | React 18, TypeScript, Tailwind CSS, shadcn/ui |
-| AI — chat | [Ollama](https://ollama.com) local LLM (streaming) |
-| AI — embeddings | Ollama `nomic-embed-text` (768-dim vectors) |
-| Database | [MongoDB](https://www.mongodb.com) (notes, chunks, threads, users) |
-| Auth | Rust backend — Argon2 password hashing, Google OAuth, JWT sessions |
-| HTTP (Rust) | `reqwest` with `rustls-tls` |
-
----
-
-## Status
-
-The app is **fully functional end-to-end**:
-
-- ✅ Authentication (email/password + Google OAuth)
-- ✅ Note creation, editing, and deletion
-- ✅ Vector embedding on save (stored in MongoDB)
-- ✅ Semantic RAG search with keyword fallback
-- ✅ Persistent conversation threads
-- ✅ Ollama installation and model management
-
-Upcoming:
-- File import (drag-and-drop `.md` / `.txt` / `.pdf`)
-- Activity log and indexing queue
-- Mobile / cross-platform build
-
----
-
-## Running locally
-
-You'll need [Node.js](https://nodejs.org), the [Rust toolchain](https://rustup.rs), [Ollama](https://ollama.com), and a MongoDB connection string.
-
-**1. Clone and install**
-
-```bash
-git clone <repo-url>
-cd notes-tauri-app
-npm install
-```
-
-**2. Environment variables**
-
-Create a `.env` file in the project root:
-
-```env
-VITE_MONGO_CONNECTION_STRING=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/second-brain
-VITE_GOOGLE_CLIENT_ID=<your-google-client-id>
-VITE_GOOGLE_CLIENT_SECRET=<your-google-client-secret>
-```
-
-MongoDB Atlas free tier works. Create a cluster, get the connection string, and paste it in.
-
-**3. Pull Ollama models**
-
-```bash
-ollama pull minimax-m2.7:cloud   # or any chat model
-ollama pull nomic-embed-text     # required for vector embeddings
-```
-
-**4. Run**
-
-```bash
-npm run tauri dev
-```
+|-------|-----------|
+| Desktop shell | [Tauri](https://tauri.app) v2 — Rust core, WebKit renderer |
+| Frontend | React 18, TypeScript, Tailwind CSS, shadcn/ui |
+| State / IPC | Tauri `invoke()` — no REST layer, direct Rust ↔ JS bridge |
+| LLM (chat) | [Ollama](https://ollama.com) — local streaming via `reqwest` SSE |
+| Embeddings | Ollama `nomic-embed-text` — 768-dim vectors, cosine similarity |
+| Database | MongoDB — collections: `notes`, `note_chunks`, `threads`, `messages`, `users` |
+| Auth | Argon2 password hashing, Google OAuth token exchange, RS256 JWT (all in Rust) |
 
 ---
 
@@ -137,19 +101,65 @@ npm run tauri dev
 ```
 src/
 ├── components/
-│   ├── ask/           # Chat workspace — RAG query, streaming, thread list
-│   ├── library/       # Note browser, editor, AI writing assistant
-│   ├── settings/      # Ollama management, model catalog, theme
-│   └── auth/          # Sign-in / sign-up page
-├── contexts/          # AuthProvider — JWT session, Google OAuth flow
+│   ├── ask/           # Chat workspace — RAG query, streaming, thread list, message rows
+│   ├── library/       # Note browser, Markdown editor, AI writing assistant
+│   ├── settings/      # Ollama model management, theme, model config
+│   └── auth/          # Sign-in / sign-up screens
+├── contexts/          # AuthProvider — JWT session, Google OAuth callback
 ├── hooks/             # useOllamaSettings, useTheme
-├── lib/               # Ollama HTTP client
-└── types/             # Shared TypeScript domain types
+├── lib/               # Ollama HTTP client (streaming SSE)
+└── types/             # Shared TypeScript domain types (Note, Thread, ChatMessage, Citation)
 
 src-tauri/src/
-├── auth.rs            # Registration, login, Google token exchange, JWTs
-├── notes.rs           # Note CRUD, text chunking, embedding, vector search
-├── threads.rs         # Thread persistence (save, load, delete)
-├── ollama_install.rs  # Platform-specific Ollama installer
-└── lib.rs             # Tauri setup, AppState, command registration
+├── auth.rs            # Register, login, Google token exchange, JWT sign/verify
+├── notes.rs           # Note CRUD, text chunking, Ollama embedding, vector search
+├── threads.rs         # Thread metadata persistence (save, list, delete)
+├── messages.rs        # Per-message persistence — save, list by thread (sorted), bulk delete
+├── ollama_install.rs  # Platform-specific Ollama installer and model catalog
+└── lib.rs             # Tauri app setup, AppState, command registration
 ```
+
+---
+
+## Running locally
+
+**Prerequisites:** [Node.js](https://nodejs.org) · [Rust toolchain](https://rustup.rs) · [Ollama](https://ollama.com) · MongoDB connection string (Atlas free tier works)
+
+```bash
+# 1. Clone and install
+git clone <repo-url>
+cd notes-tauri-app
+npm install
+
+# 2. Environment variables — create .env in project root
+VITE_MONGO_CONNECTION_STRING=mongodb+srv://<user>:<password>@<cluster>.mongodb.net/second-brain
+VITE_GOOGLE_CLIENT_ID=<your-google-client-id>
+VITE_GOOGLE_CLIENT_SECRET=<your-google-client-secret>
+
+# 3. Pull Ollama models
+ollama pull llama3.2          # or any chat model you prefer
+ollama pull nomic-embed-text  # required for vector embeddings
+
+# 4. Run
+npm run tauri dev
+```
+
+---
+
+## Status
+
+**Fully functional end-to-end.** All core features are built and working:
+
+- ✅ Email/password + Google OAuth authentication
+- ✅ Note creation, editing, deletion with Markdown preview
+- ✅ AI writing assistant inside the editor
+- ✅ Automatic vector embedding on note save
+- ✅ Semantic RAG search with keyword fallback
+- ✅ Streaming LLM answers with source citations and latency logging
+- ✅ Persistent per-message conversation history, sorted by timestamp
+- ✅ Ollama daemon management and model installation from the app
+
+Potential next steps:
+- File import (drag-and-drop `.md` / `.txt` / `.pdf`)
+- Cross-platform build (Windows / Linux)
+- Shared workspaces / multi-user
