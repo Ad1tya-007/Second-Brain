@@ -26,6 +26,7 @@ type AuthResult = {
 type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
+  dbReady: boolean;
   error: string | null;
   loginWithEmail: (email: string, password: string) => Promise<void>;
   registerWithEmail: (email: string, password: string) => Promise<void>;
@@ -103,15 +104,18 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => restoreUser());
   const [loading, setLoading] = useState(false);
+  const [dbReady, setDbReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Initialise the MongoDB connection once on mount.
   useEffect(() => {
     const uri = import.meta.env.VITE_MONGO_CONNECTION_STRING as string | undefined;
     if (!uri) return;
-    invoke<void>("setup_db", { connectionString: uri }).catch((e) => {
-      console.error("setup_db failed:", e);
-    });
+    invoke<void>("setup_db", { connectionString: uri })
+      .then(() => setDbReady(true))
+      .catch((e) => {
+        console.error("setup_db failed:", e);
+      });
   }, []);
 
   const clearError = useCallback(() => setError(null), []);
@@ -243,7 +247,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, error, loginWithEmail, registerWithEmail, loginWithGoogle, logout, clearError }}
+      value={{ user, loading, dbReady, error, loginWithEmail, registerWithEmail, loginWithGoogle, logout, clearError }}
     >
       {children}
     </AuthContext.Provider>

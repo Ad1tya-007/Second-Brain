@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { toast } from 'sonner';
 
 import { AskWorkspace } from '@/components/ask/ask-workspace';
 import { LibraryWorkspace } from '@/components/library/library-workspace';
@@ -30,7 +31,7 @@ function makeDefaultThread(): Thread {
 }
 
 export function AppShell() {
-  const { user } = useAuth();
+  const { user, dbReady } = useAuth();
   const { settings, setSettings } = useOllamaSettings();
   const { matchSystem, manualTheme, setMatchSystem, setManualTheme } = useTheme();
 
@@ -46,9 +47,9 @@ export function AppShell() {
     setView('library');
   }, []);
 
-  // ── Load threads from MongoDB on mount ────────────────────────────────────
+  // ── Load threads from MongoDB once the DB connection is ready ────────────
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || !dbReady) return;
     invoke<ThreadResult[]>('list_threads', { userId: user.id })
       .then((data) => {
         if (data.length === 0) return;
@@ -63,8 +64,8 @@ export function AppShell() {
         setThreads(loaded);
         setActiveThreadId(loaded[0].id);
       })
-      .catch(() => {/* DB not ready yet — keep the default in-memory thread */});
-  }, [user?.id]);
+      .catch(() => {/* Failed to load threads — keep the default in-memory thread */});
+  }, [user?.id, dbReady]);
 
   // ── Auto-save threads to MongoDB (3 s debounce) ───────────────────────────
   // The debounce prevents saving on every streaming token; it only fires after
@@ -139,6 +140,7 @@ export function AppShell() {
       setActiveThreadId((cur) => (cur === threadId ? next[0].id : cur));
       return next;
     });
+    toast.success('Thread deleted');
   }, [user?.id]);
 
   const handleThreadUpdate = useCallback(
