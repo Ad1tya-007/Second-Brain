@@ -14,6 +14,10 @@ export type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
   citations?: Citation[];
+  /** ISO timestamp of when this message was created. */
+  timestamp: string;
+  /** How long the LLM took to generate this response in milliseconds (assistant only). */
+  responseTimeMs?: number;
 };
 
 export type Thread = {

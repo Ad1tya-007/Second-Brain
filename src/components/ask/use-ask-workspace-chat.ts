@@ -5,6 +5,7 @@ import {
   useState,
   type KeyboardEvent,
 } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 
 import type { OllamaSettings } from '@/hooks/use-ollama-settings';
@@ -34,6 +35,8 @@ export function useAskWorkspaceChat({
   const [streamError, setStreamError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  // Accumulates streamed tokens so we can persist the final content on done.
+  const streamedContentRef = useRef('');
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -45,12 +48,15 @@ export function useAskWorkspaceChat({
     setDraft('');
     setStreamError(null);
 
+    const userTimestamp = new Date().toISOString();
     const userMsg: ChatMessage = {
       id: `m-${Date.now()}-u`,
       role: 'user',
       content: text,
+      timestamp: userTimestamp,
     };
     const assistantMsgId = `m-${Date.now()}-a`;
+    const assistantTimestamp = new Date().toISOString();
 
     const { citations, contextBlock } = await fetchNoteContextForAsk(
       userId,
@@ -59,6 +65,18 @@ export function useAskWorkspaceChat({
     );
     const systemPrompt = buildAskSystemPrompt(contextBlock);
 
+    // Persist the user message immediately.
+    invoke('save_message', {
+      userId,
+      threadId: active.id,
+      messageId: userMsg.id,
+      role: 'user',
+      content: text,
+      citationsJson: '[]',
+      timestamp: userTimestamp,
+      responseTimeMs: null,
+    }).catch(() => {});
+
     onThreadUpdate(active.id, (t) => ({
       ...t,
       title: t.messages.length === 0 ? text.slice(0, 60) : t.title,
@@ -66,7 +84,13 @@ export function useAskWorkspaceChat({
       messages: [
         ...t.messages,
         userMsg,
-        { id: assistantMsgId, role: 'assistant' as const, content: '', citations },
+        {
+          id: assistantMsgId,
+          role: 'assistant' as const,
+          content: '',
+          citations,
+          timestamp: assistantTimestamp,
+        },
       ],
     }));
 
@@ -79,11 +103,15 @@ export function useAskWorkspaceChat({
       { role: 'user', content: text },
     ];
 
+    streamedContentRef.current = '';
+    const llmStartTime = Date.now();
+
     abortRef.current = streamOllamaChat({
       baseUrl: ollamaSettings.baseUrl,
       model: ollamaSettings.llmModel,
       messages: history,
       onToken: (token) => {
+        streamedContentRef.current += token;
         onThreadUpdate(active.id, (t) => ({
           ...t,
           messages: t.messages.map((m) =>
@@ -92,6 +120,29 @@ export function useAskWorkspaceChat({
         }));
       },
       onDone: () => {
+        const responseTimeMs = Date.now() - llmStartTime;
+        const finalContent = streamedContentRef.current;
+
+        // Stamp responseTimeMs on the in-memory assistant message.
+        onThreadUpdate(active.id, (t) => ({
+          ...t,
+          messages: t.messages.map((m) =>
+            m.id === assistantMsgId ? { ...m, responseTimeMs } : m,
+          ),
+        }));
+
+        // Persist the completed assistant message.
+        invoke('save_message', {
+          userId,
+          threadId: active.id,
+          messageId: assistantMsgId,
+          role: 'assistant',
+          content: finalContent,
+          citationsJson: JSON.stringify(citations),
+          timestamp: assistantTimestamp,
+          responseTimeMs,
+        }).catch(() => {});
+
         setGenerating(false);
         setGeneratingThreadId(null);
         abortRef.current = null;

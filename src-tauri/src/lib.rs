@@ -1,4 +1,5 @@
 mod auth;
+mod messages;
 mod notes;
 mod ollama_install;
 mod threads;
@@ -92,6 +93,9 @@ pub fn run() {
             threads::list_threads,
             threads::save_thread,
             threads::delete_thread,
+            messages::save_message,
+            messages::list_thread_messages,
+            messages::delete_thread_messages,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

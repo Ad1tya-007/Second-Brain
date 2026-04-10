@@ -9,16 +9,18 @@ use crate::AppState;
 // Types
 // ---------------------------------------------------------------------------
 
-/// Lightweight thread metadata + serialised messages returned to the frontend.
-/// Messages are stored as a JSON string to avoid complex BSON mapping of
-/// optional citation fields.
+/// Lightweight thread metadata returned to the frontend.
+/// `messages_json` is kept for backward-compat migration of older records;
+/// new messages are stored in the dedicated `messages` collection.
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ThreadResult {
     pub id: String,
     pub title: String,
     pub updated_at: String,
-    /// JSON-encoded ChatMessage[] — parsed by the frontend.
+    /// Legacy field — JSON-encoded ChatMessage[] from before per-message storage.
+    /// May be empty ("[]") for new threads. Frontend falls back to this when the
+    /// `messages` collection returns nothing for the thread.
     pub messages_json: String,
 }
 
@@ -55,7 +57,7 @@ pub async fn list_threads(
 }
 
 // ---------------------------------------------------------------------------
-// save_thread  (upsert by thread_id + user_id)
+// save_thread  (upsert by thread_id + user_id — metadata only, no messages)
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
@@ -64,7 +66,6 @@ pub async fn save_thread(
     thread_id: String,
     title: String,
     updated_at: String,
-    messages_json: String,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let db = state.db.lock().await.clone().ok_or("Database not initialized.")?;
@@ -73,11 +74,10 @@ pub async fn save_thread(
     let filter = doc! { "user_id": &user_id, "thread_id": &thread_id };
     let update = doc! {
         "$set": {
-            "user_id":       &user_id,
-            "thread_id":     &thread_id,
-            "title":         &title,
-            "updated_at":    &updated_at,
-            "messages_json": &messages_json,
+            "user_id":    &user_id,
+            "thread_id":  &thread_id,
+            "title":      &title,
+            "updated_at": &updated_at,
         }
     };
 

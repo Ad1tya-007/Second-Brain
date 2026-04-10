@@ -13,12 +13,21 @@ import { useTheme } from '@/hooks/use-theme';
 import { checkOllamaReachable } from '@/lib/ollama';
 import type { Thread } from '@/types/domain';
 
-// Shape returned by the Rust list_threads command
 type ThreadResult = {
   id: string;
   title: string;
   updatedAt: string;
+  /** Legacy field — JSON-encoded messages from before per-message storage. */
   messagesJson: string;
+};
+
+type MessageResult = {
+  messageId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  citationsJson: string;
+  timestamp: string;
+  responseTimeMs?: number;
 };
 
 function makeDefaultThread(): Thread {
@@ -51,25 +60,54 @@ export function AppShell() {
   useEffect(() => {
     if (!user?.id || !dbReady) return;
     invoke<ThreadResult[]>('list_threads', { userId: user.id })
-      .then((data) => {
+      .then(async (data) => {
         if (data.length === 0) return;
-        const loaded: Thread[] = data.map((t) => ({
-          id: t.id,
-          title: t.title,
-          updatedAt: t.updatedAt,
-          messages: (() => {
-            try { return JSON.parse(t.messagesJson); } catch { return []; }
-          })(),
-        }));
+
+        const loaded: Thread[] = await Promise.all(
+          data.map(async (t) => {
+            // Prefer messages from the dedicated collection; fall back to the
+            // legacy messages_json field for threads created before migration.
+            let msgs = await invoke<MessageResult[]>('list_thread_messages', {
+              userId: user.id,
+              threadId: t.id,
+            }).catch(() => [] as MessageResult[]);
+
+            if (msgs.length === 0 && t.messagesJson && t.messagesJson !== '[]') {
+              try {
+                msgs = JSON.parse(t.messagesJson) as MessageResult[];
+              } catch {
+                msgs = [];
+              }
+            }
+
+            const messages = msgs.map((m) => ({
+              id: m.messageId ?? (m as Record<string, unknown>).id as string,
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+              citations: (() => {
+                try {
+                  const src = m.citationsJson ?? (m as Record<string, unknown>).citations;
+                  return typeof src === 'string' ? JSON.parse(src) : (src ?? []);
+                } catch { return []; }
+              })(),
+              timestamp: m.timestamp ?? new Date(0).toISOString(),
+              responseTimeMs: m.responseTimeMs,
+            }));
+
+            return { id: t.id, title: t.title, updatedAt: t.updatedAt, messages };
+          }),
+        );
+
         setThreads(loaded);
         setActiveThreadId(loaded[0].id);
       })
       .catch(() => {/* Failed to load threads — keep the default in-memory thread */});
   }, [user?.id, dbReady]);
 
-  // ── Auto-save threads to MongoDB (3 s debounce) ───────────────────────────
-  // The debounce prevents saving on every streaming token; it only fires after
-  // threads have been stable for 3 seconds (i.e. after generation completes).
+  // ── Auto-save thread metadata to MongoDB (3 s debounce) ─────────────────
+  // Individual messages are saved immediately via `save_message` inside the
+  // chat hook; here we only persist the lightweight thread record (title,
+  // updatedAt) so the sidebar stays in sync.
   const threadsRef = useRef(threads);
   threadsRef.current = threads;
 
@@ -84,7 +122,6 @@ export function AppShell() {
             threadId: th.id,
             title: th.title,
             updatedAt: th.updatedAt,
-            messagesJson: JSON.stringify(th.messages),
           }).catch(() => {});
         });
     }, 3_000);
@@ -132,6 +169,7 @@ export function AppShell() {
   const handleDeleteThread = useCallback((threadId: string) => {
     if (user?.id) {
       invoke('delete_thread', { threadId, userId: user.id }).catch(() => {});
+      invoke('delete_thread_messages', { threadId, userId: user.id }).catch(() => {});
     }
     setThreads((prev) => {
       const remaining = prev.filter((t) => t.id !== threadId);
